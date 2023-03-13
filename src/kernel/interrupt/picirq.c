@@ -22,6 +22,18 @@ static void pic_set_mask(uint16 mask)
     }
 }
 
+
+// 设置FFLAGS的中断标志位IF，即开启或关闭CPU的中断功能
+void cpu_interrupt_enable(void)
+{
+    sti();
+}
+
+void cpu_interrupt_disable(void)
+{
+    cli();
+}
+
 // 将OCW1对应位置为0,即开启IRQ号中断，irq取值为0～15
 void pic_enable(uint32 irq)
 {

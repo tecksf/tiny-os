@@ -17,6 +17,7 @@ include_directories(
     src/kernel/memory
     src/kernel/libs
     src/kernel/driver
+    src/kernel/interrupt
 )
 
 # ========= bootloader =========
@@ -49,5 +50,6 @@ add_custom_target(create_image
     COMMAND dd if=${EXECUTABLE_OUTPUT_PATH}/kernel of=${IMAGE} seek=1 conv=notrunc
     DEPENDS write_boot_block kernel)
 
-add_custom_target(start_qemu_debug
-    COMMAND qemu-system-i386 -s -S -no-reboot -parallel stdio -hda ${CMAKE_CURRENT_BINARY_DIR}/${IMAGE} -serial null)
+add_custom_target(start_qemu
+    COMMAND qemu-system-i386 -no-reboot -parallel stdio -hda ${CMAKE_CURRENT_BINARY_DIR}/${IMAGE} -serial null
+    DEPENDS create_image)

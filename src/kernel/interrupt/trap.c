@@ -1,5 +1,8 @@
 #include <x86.h>
 #include <gdt.h>
+#include <clock.h>
+#include <stdio.h>
+#include "picirq.h"
 #include "trap.h"
 #include "gate.h"
 
@@ -20,7 +23,22 @@ void idt_init()
     lidt(&idt_pd);
 }
 
+static void trap_dispatch(struct TrapFrame *tf)
+{
+    char c;
+
+    switch (tf->tf_trapno)
+    {
+        case IRQ_OFFSET + IRQ_TIMER:
+            ticks++;
+            if (ticks % TICK_NUM == 0)
+                printf("interrupt: %d ticks\n", ticks / TICK_NUM);
+            break;
+        default:
+    }
+}
+
 void trap(struct TrapFrame *tf)
 {
-
+    trap_dispatch(tf);
 }

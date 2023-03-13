@@ -3,7 +3,9 @@
 //
 #include <stdio.h>
 #include "driver/console.h"
+#include "driver/clock.h"
 #include "interrupt/picirq.h"
+#include "interrupt/trap.h"
 
 void kern_init(void)
 {
@@ -11,7 +13,14 @@ void kern_init(void)
 
     const char *message = "os is loading ...";
     printf("%s\n\n", message);
-
     puts("start to initialize IDT...");
+
     pic_init();
+    idt_init();
+
+    clock_init();
+    cpu_interrupt_enable();
+
+
+    while (1);
 }
