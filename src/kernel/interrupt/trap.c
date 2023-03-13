@@ -1,6 +1,7 @@
 #include <x86.h>
 #include <gdt.h>
 #include <clock.h>
+#include <keyboard.h>
 #include <stdio.h>
 #include "picirq.h"
 #include "trap.h"
@@ -25,7 +26,7 @@ void idt_init()
 
 static void trap_dispatch(struct TrapFrame *tf)
 {
-    char c;
+    uint8 rc;
 
     switch (tf->tf_trapno)
     {
@@ -33,6 +34,12 @@ static void trap_dispatch(struct TrapFrame *tf)
             ticks++;
             if (ticks % TICK_NUM == 0)
                 printf("interrupt: %d ticks\n", ticks / TICK_NUM);
+            break;
+        case IRQ_OFFSET + IRQ_KBD:
+            rc = keyboard_interrupt();
+            // 松开按键返回0
+            if (rc != 0)
+                put_char(rc);
             break;
         default:
     }

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "driver/console.h"
 #include "driver/clock.h"
+#include "driver/keyboard.h"
 #include "interrupt/picirq.h"
 #include "interrupt/trap.h"
 
@@ -18,8 +19,10 @@ void kern_init(void)
     pic_init();
     idt_init();
 
-    clock_init();
+//    clock_init();
     cpu_interrupt_enable();
+
+    keyboard_init();
 
 
     while (1);
