@@ -50,7 +50,7 @@ seta20.2:
     outb %al, $0x60
 
 probe_memory:
-    # 使用BIOS中断，探测物理内存
+    # 使用BIOS中断，探测物理内存，探测结果在物理地址 0x8000，后续由 E820Map 结构体来解析使用
     movl $0, 0x8000
     xorl %ebx, %ebx
     movw $0x8004, %di
