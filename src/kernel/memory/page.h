@@ -1,5 +1,5 @@
-#ifndef __MEMORY_SITE_H__
-#define __MEMORY_SITE_H__
+#ifndef __MEMORY_PAGE_H__
+#define __MEMORY_PAGE_H__
 
 #define NUM_PAGE_DIRECTORY_ENTRY        1024                    // 每个页目录表中的项个数
 #define NUM_PAGE_TABLE_ENTRY            1024                    // 每个页表中的项个数
@@ -65,4 +65,4 @@
 #define KERNEL_STACK_PAGE_COUNT         2
 #define KERNEL_STACK_SIZE               (KERNEL_STACK_PAGE_COUNT * PAGE_SIZE)       // 内核栈大小，2页
 
-#endif // __MEMORY_SITE_H__
+#endif // __MEMORY_PAGE_H__
