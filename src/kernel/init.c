@@ -8,7 +8,7 @@
 #include "interrupt/picirq.h"
 #include "interrupt/trap.h"
 
-void kern_init(void)
+void kernel_init(void)
 {
     cons_init();
 
@@ -20,10 +20,10 @@ void kern_init(void)
     idt_init();
 
 //    clock_init();
-    cpu_interrupt_enable();
 
     keyboard_init();
 
+//    cpu_interrupt_enable();
 
     while (1);
 }

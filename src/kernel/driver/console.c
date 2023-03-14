@@ -1,5 +1,6 @@
 #include <x86.h>
 #include <string.h>
+#include <site.h>
 
 #define LPTPORT 0x378
 
@@ -66,12 +67,12 @@ static void lpt_putc(int c)
 /* TEXT-mode CGA/VGA display output */
 static void cga_init(void)
 {
-    volatile uint16 *cp = (uint16 *)CGA_BUF; //CGA_BUF: 0xB8000 (彩色显示的显存物理基址)
+    volatile uint16 *cp = (uint16 *)(CGA_BUF + KERNEL_BASE); //CGA_BUF: 0xB8000 (彩色显示的显存物理基址)
     uint16 was = *cp;                          //保存当前显存0xB8000处的值
     *cp = (uint16)0xA55A;                      // 给这个地址随便写个值，看看能否再读出同样的值
     if (*cp != 0xA55A)
     {                              // 如果读不出来，说明没有这块显存，即是单显配置
-        cp = (uint16 *)MONO_BUF; //设置为单显的显存基址 MONO_BUF： 0xB0000
+        cp = (uint16 *)(MONO_BUF + KERNEL_BASE); //设置为单显的显存基址 MONO_BUF： 0xB0000
         addr_6845 = MONO_BASE;     //设置为单显控制的IO地址，MONO_BASE: 0x3B4
     }
     else

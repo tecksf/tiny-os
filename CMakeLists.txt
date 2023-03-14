@@ -38,9 +38,9 @@ set(LD_FLAGS -m32 -nostdlib)
 
 file(GLOB_RECURSE KERNEL_SRC src/kernel/*.c)
 set(INTER_SRC src/kernel/interrupt/trap_entry.S src/kernel/interrupt/vectors.S)
-add_executable(kernel ${KERNEL_SRC} ${INTER_SRC})
+add_executable(kernel ${KERNEL_SRC} ${INTER_SRC} src/kernel/entry.S)
 target_compile_options(kernel PUBLIC ${CFLAGS})
-target_link_options(kernel PUBLIC -Wl,-Ttext 0x100000 -Wl,-e kern_init ${LD_FLAGS})
+target_link_options(kernel PUBLIC -Wl,-T ${CMAKE_SOURCE_DIR}/tools/kernel.ld ${LD_FLAGS})
 
 
 set(IMAGE kernel.img)
