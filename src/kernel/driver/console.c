@@ -1,6 +1,6 @@
 #include <x86.h>
 #include <string.h>
-#include <page.h>
+#include <layout.h>
 
 #define LPTPORT 0x378
 

@@ -1,5 +1,6 @@
 #include <bitzone.h>
 #include <page.h>
+#include <layout.h>
 
 #define REALLOC(x) (x - KERNEL_BASE)
 

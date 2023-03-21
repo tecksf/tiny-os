@@ -1,5 +1,5 @@
 #include "physical.h"
-#include "layout.h"
+#include "page.h"
 #include "gdt.h"
 #include <x86.h>
 
