@@ -9,6 +9,8 @@
 #define E820_ARM 1 // AddressRangeMemory 这段内存可以被操作系统使用
 #define E820_ARR 2 // AddressRangeReserved 内存使用中或者被系统保留，操作系统不可以使用此内存
 
+typedef uintptr pte;
+typedef uintptr pde;
 
 // 实模式下通过BIOS 0x15中断，0xE820 子功能探测到的内存布局和大小
 struct E820Map

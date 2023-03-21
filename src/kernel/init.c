@@ -7,6 +7,7 @@
 #include "driver/keyboard.h"
 #include "interrupt/picirq.h"
 #include "interrupt/trap.h"
+#include "memory/physical.h"
 
 void kernel_init(void)
 {
@@ -16,6 +17,8 @@ void kernel_init(void)
     printf("%s\n\n", message);
     puts("start to initialize IDT...");
 
+    physical_memory_init();
+
     pic_init();
     idt_init();
 
@@ -23,7 +26,7 @@ void kernel_init(void)
 
     keyboard_init();
 
-//    cpu_interrupt_enable();
+    cpu_interrupt_enable();
 
     while (1);
 }

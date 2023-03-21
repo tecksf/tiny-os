@@ -5,7 +5,7 @@
 
 typedef struct ListEntry
 {
-    struct list_entry *prev, *next;
+    struct ListEntry *prev, *next;
 } ListEntry;
 
 
