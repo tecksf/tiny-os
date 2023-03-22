@@ -158,5 +158,8 @@ void physical_memory_init()
 
     physical_page_init();
 
+    // 页目录表第1023项映射到页目录表自身
+    boot_page_dir[PageDirectoryIndex(VPT)] = PageAddress(boot_page_dir) | PTE_P | PTE_W;
+
     gdt_init();
 }

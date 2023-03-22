@@ -14,6 +14,7 @@ set(LIBRARY_OUTPUT_PATH  ${CMAKE_CURRENT_BINARY_DIR}/lib)
 
 include_directories(
     src/base
+    src/kernel/debug
     src/kernel/memory
     src/kernel/libs
     src/kernel/driver

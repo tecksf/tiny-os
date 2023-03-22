@@ -29,9 +29,9 @@ SECTIONS {
     }
 
     .stabstr : {
-        PROVIDE(__STABSTR_BEGIN__ = .);
+        PROVIDE(__STAB_STR_BEGIN__ = .);
         *(.stabstr);
-        PROVIDE(__STABSTR_END__ = .);
+        PROVIDE(__STAB_STR_END__ = .);
         BYTE(0)     /* Force the linker to allocate space
                    for this section */
     }
