@@ -3,22 +3,22 @@
 
 #include <defs.h>
 
-void *memmove(void *dst, const void *src, usize n);
-void *memset(void *s, char c, usize n);
-void *memcpy(void *dst, const void *src, usize n);
-int memcmp(const void *v1, const void *v2, usize n);
+void *memory_move(void *dst, const void *src, usize n);
+void *memory_set(void *s, char c, usize n);
+void *memory_copy(void *dst, const void *src, usize n);
+int memory_compare(const void *v1, const void *v2, usize n);
 
-usize strlen(const char *s);
-usize strnlen(const char *s, usize n);
+usize string_length(const char *s);
+usize string_num_length(const char *s, usize n);
 
-char *strcpy(char *dst, const char *src);
-char *strncpy(char *dst, const char *src, usize len);
+char *string_copy(char *dst, const char *src);
+char *string_num_copy(char *dst, const char *src, usize len);
 
-int strcmp(const char *s1, const char *s2);
-int strncmp(const char *s1, const char *s2, usize n);
+int string_compare(const char *s1, const char *s2);
+int string_num_compare(const char *s1, const char *s2, usize n);
 
-char *strchr(const char *s, char c);
-char *strfind(const char *s, char c);
-long strtol(const char *s, char **endptr, int base);
+char *string_char_retrieve(const char *s, char c);
+char *string_find(const char *s, char c);
+long string_to_long(const char *s, char **endptr, int base);
 
 #endif // __LIBS_STRING_H__

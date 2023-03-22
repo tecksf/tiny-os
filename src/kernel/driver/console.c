@@ -127,7 +127,7 @@ static void cga_putc(int c)
     if (crt_pos >= CRT_SIZE)
     {
         int i;
-        memmove(crt_buf, crt_buf + CRT_COLS, (CRT_SIZE - CRT_COLS) * sizeof(uint16));
+        memory_move(crt_buf, crt_buf + CRT_COLS, (CRT_SIZE - CRT_COLS) * sizeof(uint16));
         for (i = CRT_SIZE - CRT_COLS; i < CRT_SIZE; i++)
         {
             crt_buf[i] = 0x0700 | ' ';

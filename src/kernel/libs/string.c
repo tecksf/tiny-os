@@ -1,7 +1,7 @@
 #include "x86.h"
 #include "string.h"
 
-void *memmove(void *dst, const void *src, usize n)
+void *memory_move(void *dst, const void *src, usize n)
 {
 #ifdef __HAVE_ARCH_MEMMOVE
     return __memmove(dst, src, n);
@@ -27,7 +27,7 @@ void *memmove(void *dst, const void *src, usize n)
 #endif /* __HAVE_ARCH_MEMMOVE */
 }
 
-void *memset(void *s, char c, usize n)
+void *memory_set(void *s, char c, usize n)
 {
     char *p = s;
     while (n-- > 0)
@@ -37,7 +37,7 @@ void *memset(void *s, char c, usize n)
     return s;
 }
 
-void *memcpy(void *dst, const void *src, usize n)
+void *memory_copy(void *dst, const void *src, usize n)
 {
     const char *s = src;
     char *d = dst;
@@ -48,7 +48,7 @@ void *memcpy(void *dst, const void *src, usize n)
     return dst;
 }
 
-int memcmp(const void *v1, const void *v2, usize n)
+int memory_compare(const void *v1, const void *v2, usize n)
 {
     const char *s1 = (const char *) v1;
     const char *s2 = (const char *) v2;
@@ -63,7 +63,7 @@ int memcmp(const void *v1, const void *v2, usize n)
     return 0;
 }
 
-usize strlen(const char *s)
+usize string_length(const char *s)
 {
     usize len = 0;
     while (*s++ != '\0')
@@ -73,7 +73,7 @@ usize strlen(const char *s)
     return len;
 }
 
-usize strnlen(const char *s, usize n)
+usize string_num_length(const char *s, usize n)
 {
     usize len = 0;
     while (len < n && *s++ != '\0')
@@ -83,7 +83,7 @@ usize strnlen(const char *s, usize n)
     return len;
 }
 
-char *strcpy(char *dst, const char *src)
+char *string_copy(char *dst, const char *src)
 {
     char *p = dst;
     while ((*p++ = *src++) != '\0')
@@ -91,7 +91,7 @@ char *strcpy(char *dst, const char *src)
     return dst;
 }
 
-char *strncpy(char *dst, const char *src, usize len)
+char *string_num_copy(char *dst, const char *src, usize len)
 {
     char *p = dst;
     while (len > 0)
@@ -105,7 +105,7 @@ char *strncpy(char *dst, const char *src, usize len)
     return dst;
 }
 
-int strcmp(const char *s1, const char *s2)
+int string_compare(const char *s1, const char *s2)
 {
     while (*s1 != '\0' && *s1 == *s2)
     {
@@ -114,7 +114,7 @@ int strcmp(const char *s1, const char *s2)
     return (int) ((unsigned char) *s1 - (unsigned char) *s2);
 }
 
-int strncmp(const char *s1, const char *s2, usize n)
+int string_num_compare(const char *s1, const char *s2, usize n)
 {
     while (n > 0 && *s1 != '\0' && *s1 == *s2)
     {
@@ -123,7 +123,7 @@ int strncmp(const char *s1, const char *s2, usize n)
     return (n == 0) ? 0 : (int) ((unsigned char) *s1 - (unsigned char) *s2);
 }
 
-char *strchr(const char *s, char c)
+char *string_char_retrieve(const char *s, char c)
 {
     while (*s != '\0')
     {
@@ -136,7 +136,7 @@ char *strchr(const char *s, char c)
     return NULL;
 }
 
-char *strfind(const char *s, char c)
+char *string_find(const char *s, char c)
 {
     while (*s != '\0')
     {
@@ -149,7 +149,7 @@ char *strfind(const char *s, char c)
     return (char *) s;
 }
 
-long strtol(const char *s, char **endptr, int base)
+long string_to_long(const char *s, char **endptr, int base)
 {
     int neg = 0;
     long val = 0;

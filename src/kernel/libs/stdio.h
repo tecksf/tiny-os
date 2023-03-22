@@ -2,9 +2,11 @@
 #define __LIBS_STDIO_H__
 
 #include <defs.h>
+#include <stdarg.h>
 
 void put_char(int c);
 int puts(const char *str);
 int printf(const char *fmt, ...);
+int variant_print(const char *fmt, va_list ap);
 
 #endif // __LIBS_STDIO_H__

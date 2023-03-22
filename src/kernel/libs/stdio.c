@@ -3,7 +3,6 @@
 #include <console.h>
 #include <x86.h>
 #include <error.h>
-#include <stdarg.h>
 
 void format_output(void (*output)(int, void *), void *putdat, const char *fmt, va_list ap);
 void print_fmt(void (*output)(int, void *), void *putdat, const char *fmt, ...);
@@ -99,8 +98,15 @@ int printf(const char *fmt, ...)
     va_list ap;
     int cnt;
     va_start(ap, fmt);
-    format_output((void*)put_char_with_count, &cnt, fmt, ap);
+    format_output((void *) put_char_with_count, &cnt, fmt, ap);
     va_end(ap);
+    return cnt;
+}
+
+int variant_print(const char *fmt, va_list ap)
+{
+    int cnt;
+    format_output((void *) put_char_with_count, &cnt, fmt, ap);
     return cnt;
 }
 
@@ -199,7 +205,7 @@ void format_output(void (*output)(int, void *), void *putdat, const char *fmt, v
                 }
                 if (width > 0 && padc != '-')
                 {
-                    for (width -= strnlen(p, precision); width > 0; width--)
+                    for (width -= string_num_length(p, precision); width > 0; width--)
                     {
                         output(padc, putdat);
                     }
