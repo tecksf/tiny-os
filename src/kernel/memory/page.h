@@ -9,8 +9,8 @@
 #define PTSIZE          (PAGE_SIZE * NPTEENTRY)    // bytes mapped by a page directory entry
 #define PTSHIFT         22                      // log2(PTSIZE)
 
-#define PTXSHIFT        12                      // offset of PTX in a linear address
-#define PDXSHIFT        22                      // offset of PDX in a linear address
+#define PAGE_TABLE_INDEX_SHIFT              12                      // 线性地址中页表项偏移位置
+#define PAGE_DIRECTORY_INDEX_SHIFT          22                      // 线性地址中页目录项偏移位置
 
 
 // 线性地址结构可分为三部分
@@ -22,16 +22,16 @@
 //  \----------- PPN(la) -----------/
 
 // 获取页目录索引
-#define PDX(la) ((((uintptr)(la)) >> PDXSHIFT) & 0x3FF)
+#define PageDirectoryIndex(linear_address) ((((uintptr)(linear_address)) >> PAGE_DIRECTORY_INDEX_SHIFT) & 0x3FF)
 
 // 获取页表索引
-#define PTX(la) ((((uintptr)(la)) >> PTXSHIFT) & 0x3FF)
+#define PageTableIndex(linear_address) ((((uintptr)(linear_address)) >> PAGE_TABLE_INDEX_SHIFT) & 0x3FF)
 
-// page number field of address
-#define PPN(la) (((uintptr)(la)) >> PTXSHIFT)
+// 获取页目录项+页表项
+#define PageTableNum(linear_address) (((uintptr)(linear_address)) >> PAGE_TABLE_INDEX_SHIFT)
 
 // 页内偏移地址
-#define PGOFF(la) (((uintptr)(la)) & 0xFFF)
+#define PageOffset(linear_address) (((uintptr)(linear_address)) & 0xFFF)
 
 // 构造线性地址
 #define PGADDR(d, t, o) ((uintptr)((d) << PDXSHIFT | (t) << PTXSHIFT | (o)))
@@ -57,14 +57,15 @@
 #ifndef __ASSEMBLER__
 
 #define E820_MAX 20
-#define E820_ARM 1 // AddressRangeMemory 这段内存可以被操作系统使用
-#define E820_ARR 2 // AddressRangeReserved 内存使用中或者被系统保留，操作系统不可以使用此内存
-
-typedef uintptr pte;
-typedef uintptr pde;
+#define E820_ADDRESS_RANGE_MEMORY 1     // 这段内存可以被操作系统使用
+#define E820_ADDRESS_RANGE_RESERVED 2   // 内存使用中或者被系统保留，操作系统不可以使用此内存
 
 #include <list.h>
 #include <atomic.h>
+
+typedef uintptr pte;
+typedef uintptr pde;
+typedef uintptr ppn;
 
 // 实模式下通过BIOS 0x15中断，0xE820 子功能探测到的内存布局和大小
 struct E820Map
@@ -99,12 +100,50 @@ struct Page
 #define ClearPageProperty(page)     clear_bit(PAGE_PROPERTY, &((page)->flags))
 #define IsPageProperty(page)        test_bit(PAGE_PROPERTY, &((page)->flags))
 
+#define OffsetOfPage(le, member) container_of((le), struct Page, member)
+
+static inline int get_page_reference(struct Page *page)
+{
+    return page->ref;
+}
+
+static inline void set_page_reference(struct Page *page, int val)
+{
+    page->ref = val;
+}
+
+static inline int increase_page_reference(struct Page *page)
+{
+    page->ref += 1;
+    return page->ref;
+}
+
+static inline int decrease_page_reference(struct Page *page)
+{
+    page->ref -= 1;
+    return page->ref;
+}
+
+
 // 所有连续内存空闲快由一个双向链表管理，FreeArea.free_list则记录该链表的首尾空闲块的地址
 // num 为空闲块的个数
 struct FreeArea
 {
     ListEntry free_list;
     unsigned int num;
+};
+
+struct PhysicalMemoryManager
+{
+    const char *name;                                       // XXX_pmm_manager's name
+    void (*init)(void);                                     // initialize internal description&management data structure
+    // (free block list, number of free block) of XXX_pmm_manager
+    void (*init_memory_map)(struct Page *base, usize n);    // setup description&management data structcure according to
+    // the initial free physical memory space
+    struct Page *(*alloc_pages)(usize n);                   // allocate >=n pages, depend on the allocation algorithm
+    void (*free_pages)(struct Page *base, usize n);         // free >=n pages with "base" addr of Page descriptor structures
+    usize (*get_number_of_free_pages)(void);                // return the number of free pages
+    void (*check)(void);                                    // check the correctness of XXX_pmm_manager
 };
 
 #endif // __ASSEMBLER__

@@ -2,6 +2,11 @@
 #define __MEMORY_PHYSICAL_H__
 
 #include <defs.h>
+#include "layout.h"
+#include "page.h"
+
+extern usize num_of_physical_page;
+extern struct Page *pages;
 
 struct TaskState
 {
@@ -44,7 +49,33 @@ struct TaskState
     uint16 ts_iomb;       // i/o map base address
 } __attribute__((packed));
 
+#define PageAddress(kva) ({                                                   \
+            uintptr __m_kva = (uintptr)(kva);                       \
+            if (__m_kva < KERNEL_BASE) {                                   \
+            }                                                           \
+            __m_kva - KERNEL_BASE;                                         \
+        })
+
+#define KADDR(pa) ({                                                    \
+            uintptr __m_pa = (pa);                                    \
+            usize __m_ppn = PPN(__m_pa);                               \
+            if (__m_ppn >= npage) {                                     \
+                                                                        \
+            }                                                           \
+            (void *) (__m_pa + KERNEL_BASE);                               \
+        })
+
+
 void physical_memory_init();
+
+static inline struct Page* physical_address_to_page(uintptr pa)
+{
+    if (PageTableNum(pa) >= num_of_physical_page)
+    {
+
+    }
+    return &pages[PageTableNum(pa)];
+}
 
 
 #endif // __MEMORY_PHYSICAL_H__

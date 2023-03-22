@@ -5,8 +5,8 @@
 #define NULL ((void *)0)
 #endif
 
- #define true 1
- #define false 0
+#define true 1
+#define false 0
 
 #define __always_inline inline __attribute__((always_inline))
 #define __noinline __attribute__((noinline))
@@ -24,16 +24,15 @@ typedef unsigned long long uint64;
 typedef int32 intptr;
 typedef uint32 uintptr;
 typedef uintptr usize;
-typedef uint32 ppn_t;
 
-#define ROUNDDOWN(a, n) ({        \
+#define RoundDown(a, n) ({        \
     uint32 __a = (uint32)(a);     \
     (typeof(a))(__a - __a % (n)); \
 })
 
-#define ROUNDUP(a, n) ({                                \
+#define RoundUp(a, n) ({                                \
     uint32 __n = (uint32)(n);                           \
-    (typeof(a))(ROUNDDOWN((uint32)(a) + __n - 1, __n)); \
+    (typeof(a))(RoundDown((uint32)(a) + __n - 1, __n)); \
 })
 
 #define offsetof(type, member) ((uint32)(&((type *)0)->member))
