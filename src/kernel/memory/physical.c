@@ -1,7 +1,10 @@
 #include "physical.h"
 #include "gdt.h"
+#include <error.h>
 #include <x86.h>
 #include <stdio.h>
+#include <string.h>
+#include <synchronous.h>
 #include "manager/first_fit.h"
 
 struct Arch
@@ -119,7 +122,7 @@ static void physical_page_init()
         SetPageReserved(pages + i);
     }
 
-    uintptr freemem = PageAddress((uintptr) pages + sizeof(struct Page) * num_of_physical_page);
+    uintptr freemem = PhysicalAddress((uintptr) pages + sizeof(struct Page) * num_of_physical_page);
     printf("freemem = %p\n", freemem);
 
     // 对空闲的内存（freemem之后）所对应的Page进行初始化
@@ -149,17 +152,140 @@ static void physical_page_init()
     }
 }
 
+struct Page *allocate_pages(usize n)
+{
+    struct Page *page = NULL;
+    bool flag;
+    SaveLocalInterrupt(flag);
+    {
+        page = memory_manager->alloc_pages(n);
+    }
+    RestoreLocalInterrupt(flag);
+
+    return page;
+}
+
+void deallocate_pages(struct Page *base, usize n)
+{
+    bool flag;
+    SaveLocalInterrupt(flag);
+    {
+        memory_manager->free_pages(base, n);
+    }
+    RestoreLocalInterrupt(flag);
+}
+
+void tlb_invalidate(pde *page_dir, uintptr linear_address)
+{
+    if (rcr3() == PhysicalAddress(page_dir))
+    {
+        invlpg((void *) linear_address);
+    }
+}
+
+pte *get_page_table_entry(pde *page_dir, uintptr linear_address, bool create)
+{
+    pde *entry = &page_dir[PageDirectoryIndex(linear_address)];
+    if (!(*entry & PTE_P))
+    {
+        struct Page *page;
+        if (!create || (page = allocate_pages(1)) == NULL)
+        {
+            return NULL;
+        }
+        set_page_reference(page, 1);
+        uintptr physical_address = page_to_physical_address(page);
+        memory_set(VirtualAddress(physical_address), 0, PAGE_SIZE);
+        *entry = physical_address | PTE_U | PTE_W | PTE_P;
+    }
+    return &((pte *) VirtualAddress(PageDirectoryEntryAddress(*entry)))[PageTableIndex(linear_address)];
+}
 
 void physical_memory_init()
 {
-    boot_cr3 = PageAddress(boot_page_dir);
+    boot_cr3 = PhysicalAddress(boot_page_dir);
 
     physical_memory_manager_init();
 
     physical_page_init();
 
     // 页目录表第1023项映射到页目录表自身
-    boot_page_dir[PageDirectoryIndex(VPT)] = PageAddress(boot_page_dir) | PTE_P | PTE_W;
+    boot_page_dir[PageDirectoryIndex(VPT)] = PhysicalAddress(boot_page_dir) | PTE_P | PTE_W;
 
     gdt_init();
+}
+
+void *kernel_malloc(usize n)
+{
+    void *ptr = NULL;
+    struct Page *base = NULL;
+    assert(n > 0 && n < 1024 * 0124);
+    int num_pages = (n + PAGE_SIZE - 1) / PAGE_SIZE;
+    base = allocate_pages(num_pages);
+    assert(base != NULL);
+    ptr = page_to_virtual_address(base);
+    return ptr;
+}
+
+void kernel_free(void *ptr, usize n)
+{
+    assert(n > 0 && n < 1024 * 0124);
+    assert(ptr != NULL);
+    struct Page *base = NULL;
+    int num_pages = (n + PAGE_SIZE - 1) / PAGE_SIZE;
+    base = virtual_address_to_page(ptr);
+    deallocate_pages(base, num_pages);
+}
+
+// 从页表中将页表项与页表的映射取消，即将页表项置为0
+static inline void remove_page_and_page_table_entry(pde *page_dir, uintptr linear_address, pte *entry)
+{
+    // 判断页表项第0位是否为1,确认该页是否在物理内存中
+    if (*entry & PTE_P)
+    {
+        struct Page *page = page_table_entry_to_page(*entry);
+        if (decrease_page_reference(page) == 0)
+        {
+            deallocate_pages(page, 1);
+        }
+        *entry = 0;
+        tlb_invalidate(page_dir, linear_address);
+    }
+}
+
+// 设置页对应的页表项，即为页表新插入一张页
+int page_insert(pde *page_dir, struct Page *page, uintptr linear_address, uint32 perm)
+{
+    pte *entry = get_page_table_entry(page_dir, linear_address, 1);
+    if (entry == NULL)
+    {
+        return -E_NO_MEM;
+    }
+
+    increase_page_reference(page);
+    if (*entry & PTE_P)
+    {
+        struct Page *p = page_table_entry_to_page(*entry);
+        if (p == page)
+        {
+            decrease_page_reference(page);
+        }
+        else
+        {
+            remove_page_and_page_table_entry(page_dir, linear_address, entry);
+        }
+    }
+    *entry = page_to_physical_address(page) | PTE_P | perm;
+    tlb_invalidate(page_dir, linear_address);
+    return 0;
+}
+
+// 删除页对应的页表项，并将对应的Page
+void page_remove(pde *page_dir, uintptr linear_address)
+{
+    pte *entry = get_page_table_entry(page_dir, linear_address, 0);
+    if (entry != NULL)
+    {
+        remove_page_and_page_table_entry(page_dir, linear_address, entry);
+    }
 }

@@ -4,10 +4,10 @@
 #define NUM_PAGE_DIRECTORY_ENTRY        1024                    // 每个页目录表中的项个数
 #define NUM_PAGE_TABLE_ENTRY            1024                    // 每个页表中的项个数
 
-#define PAGE_SIZE       4096
-#define PGSHIFT         12                      // log2(PAGE_SIZE)
-#define PTSIZE          (PAGE_SIZE * NPTEENTRY)    // bytes mapped by a page directory entry
-#define PTSHIFT         22                      // log2(PTSIZE)
+#define PAGE_SIZE                       4096
+#define PAGE_SHIFT                      12
+#define PAGE_TABLE_SIZE                 (PAGE_SIZE * NUM_PAGE_TABLE_ENTRY)
+#define PAGE_TABLE_SHIFT                22
 
 #define PAGE_TABLE_INDEX_SHIFT              12                      // 线性地址中页表项偏移位置
 #define PAGE_DIRECTORY_INDEX_SHIFT          22                      // 线性地址中页目录项偏移位置
@@ -27,16 +27,18 @@
 // 获取页表索引
 #define PageTableIndex(linear_address) ((((uintptr)(linear_address)) >> PAGE_TABLE_INDEX_SHIFT) & 0x3FF)
 
-// 获取页目录项+页表项
-#define PageTableNum(linear_address) (((uintptr)(linear_address)) >> PAGE_TABLE_INDEX_SHIFT)
+// 获取页目录项+页表项，同时也是Page数组的索引
+#define PageIndex(linear_address) (((uintptr)(linear_address)) >> PAGE_TABLE_INDEX_SHIFT)
 
 // 页内偏移地址
 #define PageOffset(linear_address) (((uintptr)(linear_address)) & 0xFFF)
 
 // 构造线性地址
-#define PGADDR(d, t, o) ((uintptr)((d) << PDXSHIFT | (t) << PTXSHIFT | (o)))
-#define PTE_ADDR(pte)   ((uintptr)(pte) & ~0xFFF)
-#define PDE_ADDR(pde)   PTE_ADDR(pde)
+#define LinearAddress(d, t, o) ((uintptr)((d) << PAGE_DIRECTORY_INDEX_SHIFT | (t) << PAGE_TABLE_INDEX_SHIFT | (o)))
+
+// 获取页表项中页的物理地址，高20位
+#define PageTableEntryAddress(pte)   ((uintptr)(pte) & ~0xFFF)
+#define PageDirectoryEntryAddress(pde)   PageTableEntryAddress(pde)
 
 /* 页表项/页目录表项 flags */
 #define PTE_P           0x001                   // 物理页是否存在

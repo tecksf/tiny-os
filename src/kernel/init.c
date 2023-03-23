@@ -8,6 +8,7 @@
 #include "interrupt/picirq.h"
 #include "interrupt/trap.h"
 #include "memory/physical.h"
+#include "debug/kernel_print.h"
 
 void kernel_init(void)
 {
@@ -16,6 +17,7 @@ void kernel_init(void)
     const char *message = "os is loading ...";
     printf("%s\n\n", message);
     puts("start to initialize IDT...");
+    print_kernel_info();
 
     physical_memory_init();
 
