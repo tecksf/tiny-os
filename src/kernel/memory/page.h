@@ -65,10 +65,6 @@
 #include <list.h>
 #include <atomic.h>
 
-typedef uintptr pte;
-typedef uintptr pde;
-typedef uintptr ppn;
-
 // 实模式下通过BIOS 0x15中断，0xE820 子功能探测到的内存布局和大小
 struct E820Map
 {

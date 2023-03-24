@@ -24,6 +24,9 @@ typedef unsigned long long uint64;
 typedef int32 intptr;
 typedef uint32 uintptr;
 typedef uintptr usize;
+typedef uintptr pte;
+typedef uintptr pde;
+typedef uintptr ppn;
 
 #define RoundDown(a, n) ({        \
     uint32 __a = (uint32)(a);     \
