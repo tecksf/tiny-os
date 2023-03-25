@@ -1,10 +1,12 @@
 #include "physical.h"
 #include "gdt.h"
+#include <env.h>
 #include <error.h>
 #include <x86.h>
 #include <stdio.h>
 #include <string.h>
 #include <synchronous.h>
+#include <swap.h>
 #include "manager/first_fit.h"
 
 struct Arch
@@ -288,4 +290,25 @@ void page_remove(pde *page_dir, uintptr linear_address)
     {
         remove_page_and_page_table_entry(page_dir, linear_address, entry);
     }
+}
+
+struct Page *page_dir_alloc_page(pde *page_dir, uintptr linear_address, uint32 perm)
+{
+    struct Page *page = allocate_pages(1);
+    if (page != NULL)
+    {
+        if (page_insert(page_dir, page, linear_address, perm) != 0)
+        {
+            deallocate_pages(page, 1);
+            return NULL;
+        }
+        if (swap_init_ok)
+        {
+            swap_map_swappable(virtual_memory_verification, linear_address, page, 0);
+            page->pra_vaddr = linear_address;
+            assert(get_page_reference(page) == 1);
+            //printf("get No. %d  page: pra_vaddr %x, pra_link.prev %x, pra_link_next %x in pgdir_alloc_page\n", (page-pages), page->pra_vaddr,page->pra_page_link.prev, page->pra_page_link.next);
+        }
+    }
+    return page;
 }

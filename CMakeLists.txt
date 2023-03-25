@@ -9,7 +9,7 @@ set(CMAKE_C_STANDARD 99)
 
 
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/bin)
-set(LIBRARY_OUTPUT_PATH  ${CMAKE_CURRENT_BINARY_DIR}/lib)
+set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/lib)
 
 
 include_directories(
@@ -19,6 +19,8 @@ include_directories(
     src/kernel/libs
     src/kernel/driver
     src/kernel/interrupt
+    src/kernel/filesystem
+    src/kernel/core
 )
 
 # ========= bootloader =========
@@ -54,3 +56,10 @@ add_custom_target(create_image
 add_custom_target(start_qemu
     COMMAND qemu-system-i386 -no-reboot -parallel stdio -hda ${CMAKE_CURRENT_BINARY_DIR}/${IMAGE} -serial null
     DEPENDS create_image)
+
+add_custom_command(TARGET create_image
+    POST_BUILD
+    COMMAND dd if=/dev/zero of=disk2.img count=10000
+    COMMAND dd if=/dev/zero of=disk3.img count=10000
+    COMMAND dd if=/dev/zero of=disk4.img count=10000
+    VERBATIM)

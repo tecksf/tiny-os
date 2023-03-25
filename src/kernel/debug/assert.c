@@ -8,11 +8,11 @@ static bool is_panic = 0;
 
 void __panic(const char *file, int line, const char *fmt, ...)
 {
-    if (is_panic)
-    {
-        goto panic_dead;
-    }
-    is_panic = 1;
+//    if (is_panic)
+//    {
+//        goto panic_dead;
+//    }
+//    is_panic = 1;
 
     va_list ap;
     va_start(ap, fmt);

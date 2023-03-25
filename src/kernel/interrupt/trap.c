@@ -4,7 +4,8 @@
 #include <keyboard.h>
 #include <stdio.h>
 #include <assert.h>
-#include <virtual.h>
+#include <env.h>
+#include "virtual.h"
 #include "picirq.h"
 #include "trap.h"
 #include "gate.h"
@@ -131,11 +132,10 @@ static inline void print_page_fault(struct TrapFrame *tf)
 
 static int page_fault_handler(struct TrapFrame *tf)
 {
-    extern struct VirtualMemory *check_mm_struct;
     print_page_fault(tf);
-    if (check_mm_struct != NULL)
+    if (virtual_memory_verification != NULL)
     {
-        return do_page_fault(check_mm_struct, tf->tf_err, rcr2());
+        return do_page_fault(virtual_memory_verification, tf->tf_err, rcr2());
     }
     panic("unhandled page fault.\n");
 }

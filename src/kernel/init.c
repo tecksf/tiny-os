@@ -5,9 +5,12 @@
 #include "driver/console.h"
 #include "driver/clock.h"
 #include "driver/keyboard.h"
+#include "driver/ide.h"
 #include "interrupt/picirq.h"
 #include "interrupt/trap.h"
 #include "memory/physical.h"
+#include "memory/virtual.h"
+#include "filesystem/swap.h"
 #include "debug/kernel_print.h"
 
 void kernel_init(void)
@@ -23,6 +26,11 @@ void kernel_init(void)
 
     pic_init();
     idt_init();
+
+    virtual_memory_init();
+
+    ide_init();
+    swap_init();
 
 //    clock_init();
 
