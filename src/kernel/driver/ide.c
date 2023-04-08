@@ -1,7 +1,7 @@
 #include "ide.h"
+#include "console.h"
 #include <assert.h>
 #include <x86.h>
-#include <stdio.h>
 #include <picirq.h>
 #include <trap.h>
 
@@ -144,7 +144,7 @@ void ide_init(void)
             model[i] = '\0';
         } while (i-- > 0 && model[i] == ' ');
 
-        printf("ide %d: %10u(sectors), '%s'.\n", ide_number, ide_devices[ide_number].size, ide_devices[ide_number].model);
+        kernel_print("ide %d: %10u(sectors), '%s'.\n", ide_number, ide_devices[ide_number].size, ide_devices[ide_number].model);
     }
 
     // 使能IDE硬盘中断

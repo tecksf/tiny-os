@@ -2,7 +2,7 @@
 #include <env.h>
 #include <list.h>
 #include <assert.h>
-#include <stdio.h>
+#include <console.h>
 #include <page.h>
 
 ListEntry pra_list_head;
@@ -15,7 +15,7 @@ static int _fifo_init_virtual_memory(struct VirtualMemory *memory)
 {
     list_init(&pra_list_head);
     memory->swap_manager_private_data = &pra_list_head;
-//    printf(" memory->swap_manager_private_data %x in fifo_init_mm\n",memory->swap_manager_private_data);
+//    kernel_print(" memory->swap_manager_private_data %x in fifo_init_mm\n",memory->swap_manager_private_data);
     return 0;
 }
 
@@ -60,40 +60,40 @@ static int _fifo_swap_out_victim(struct VirtualMemory *mm, struct Page **ptr_pag
 
 static int _fifo_check_swap(void)
 {
-    printf("write Virt Page c in fifo_check_swap\n");
+    kernel_print("write Virt Page c in fifo_check_swap\n");
     *(unsigned char *) 0x3000 = 0x0c;
     assert(page_fault_num == 4);
-    printf("write Virt Page a in fifo_check_swap\n");
+    kernel_print("write Virt Page a in fifo_check_swap\n");
     *(unsigned char *) 0x1000 = 0x0a;
     assert(page_fault_num == 4);
-    printf("write Virt Page d in fifo_check_swap\n");
+    kernel_print("write Virt Page d in fifo_check_swap\n");
     *(unsigned char *) 0x4000 = 0x0d;
     assert(page_fault_num == 4);
-    printf("write Virt Page b in fifo_check_swap\n");
+    kernel_print("write Virt Page b in fifo_check_swap\n");
     *(unsigned char *) 0x2000 = 0x0b;
     assert(page_fault_num == 4);
-    printf("write Virt Page e in fifo_check_swap\n");
+    kernel_print("write Virt Page e in fifo_check_swap\n");
     *(unsigned char *) 0x5000 = 0x0e;
     assert(page_fault_num == 5);
-    printf("write Virt Page b in fifo_check_swap\n");
+    kernel_print("write Virt Page b in fifo_check_swap\n");
     *(unsigned char *) 0x2000 = 0x0b;
     assert(page_fault_num == 5);
-    printf("write Virt Page a in fifo_check_swap\n");
+    kernel_print("write Virt Page a in fifo_check_swap\n");
     *(unsigned char *) 0x1000 = 0x0a;
     assert(page_fault_num == 6);
-    printf("write Virt Page b in fifo_check_swap\n");
+    kernel_print("write Virt Page b in fifo_check_swap\n");
     *(unsigned char *) 0x2000 = 0x0b;
     assert(page_fault_num == 7);
-    printf("write Virt Page c in fifo_check_swap\n");
+    kernel_print("write Virt Page c in fifo_check_swap\n");
     *(unsigned char *) 0x3000 = 0x0c;
     assert(page_fault_num == 8);
-    printf("write Virt Page d in fifo_check_swap\n");
+    kernel_print("write Virt Page d in fifo_check_swap\n");
     *(unsigned char *) 0x4000 = 0x0d;
     assert(page_fault_num == 9);
-    printf("write Virt Page e in fifo_check_swap\n");
+    kernel_print("write Virt Page e in fifo_check_swap\n");
     *(unsigned char *) 0x5000 = 0x0e;
     assert(page_fault_num == 10);
-    printf("write Virt Page a in fifo_check_swap\n");
+    kernel_print("write Virt Page a in fifo_check_swap\n");
     assert(*(unsigned char *) 0x1000 == 0x0a);
     *(unsigned char *) 0x1000 = 0x0a;
     assert(page_fault_num == 11);

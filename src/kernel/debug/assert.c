@@ -1,6 +1,6 @@
 #include "assert.h"
 #include "kernel_print.h"
-#include <stdio.h>
+#include <console.h>
 #include <stdarg.h>
 #include <picirq.h>
 
@@ -16,11 +16,11 @@ void __panic(const char *file, int line, const char *fmt, ...)
 
     va_list ap;
     va_start(ap, fmt);
-    printf("kernel panic at %s:%d:\n    ", file, line);
+    kernel_print("kernel panic at %s:%d:\n    ", file, line);
     variant_print(fmt, ap);
-    printf("\n");
+    kernel_print("\n");
 
-    printf("stack track back:\n");
+    kernel_print("stack track back:\n");
     print_stack_frame();
 
     va_end(ap);
@@ -34,8 +34,8 @@ void __warn(const char *file, int line, const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    printf("kernel warning at %s:%d:\n    ", file, line);
+    kernel_print("kernel warning at %s:%d:\n    ", file, line);
     variant_print(fmt, ap);
-    printf("\n");
+    kernel_print("\n");
     va_end(ap);
 }

@@ -1,8 +1,8 @@
 #include "clock.h"
+#include "console.h"
 #include <picirq.h>
 #include <x86.h>
 #include <trap.h>
-#include <stdio.h>
 
 #define IO_TIMER1       0x040           // 计数器0的端口
 
@@ -26,7 +26,7 @@ void clock_init(void)
 
     ticks = 0;
 
-    printf("============== setup timer interrupts ==============\n");
+    kernel_print("============== setup timer interrupts ==============\n");
 
     // 开启PIC的IRQ0的中断，即时钟中断
     pic_enable(IRQ_TIMER);

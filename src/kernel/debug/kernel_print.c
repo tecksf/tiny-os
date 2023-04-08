@@ -1,6 +1,6 @@
 #include "kernel_print.h"
 #include "stab.h"
-#include <stdio.h>
+#include <console.h>
 #include <x86.h>
 #include <string.h>
 
@@ -183,12 +183,12 @@ static int debug_info_eip(uintptr addr, struct EipDebugInfo *info)
 void print_kernel_info()
 {
     extern char etext[], edata[], end[], kernel_init[];
-    printf("Special kernel symbols:\n");
-    printf("  entry  0x%08x (phys)\n", kernel_init);
-    printf("  etext  0x%08x (phys)\n", etext);
-    printf("  edata  0x%08x (phys)\n", edata);
-    printf("  end    0x%08x (phys)\n", end);
-    printf("Kernel executable memory footprint: %dKB\n", (end - kernel_init + 1023) / 1024);
+    kernel_print("Special kernel symbols:\n");
+    kernel_print("  entry  0x%08x (phys)\n", kernel_init);
+    kernel_print("  etext  0x%08x (phys)\n", etext);
+    kernel_print("  edata  0x%08x (phys)\n", edata);
+    kernel_print("  end    0x%08x (phys)\n", end);
+    kernel_print("Kernel executable memory footprint: %dKB\n", (end - kernel_init + 1023) / 1024);
 }
 
 void print_stack_frame()
@@ -198,13 +198,13 @@ void print_stack_frame()
     int i, j;
     for (i = 0; ebp != 0 && i < STACK_FRAME_DEPTH; i++)
     {
-        printf("ebp:0x%08x eip:0x%08x args:", ebp, eip);
+        kernel_print("ebp:0x%08x eip:0x%08x args:", ebp, eip);
         uint32 *args = (uint32 *) ebp + 2;
         for (j = 0; j < 4; j++)
         {
-            printf("0x%08x ", args[j]);
+            kernel_print("0x%08x ", args[j]);
         }
-        printf("\n");
+        kernel_print("\n");
         print_debug_info(eip - 1);
         eip = ((uint32 *) ebp)[1];
         ebp = ((uint32 *) ebp)[0];
@@ -216,7 +216,7 @@ void print_debug_info(uintptr eip)
     struct EipDebugInfo info;
     if (debug_info_eip(eip, &info) != 0)
     {
-        printf("    <unknown>: -- 0x%08x --\n", eip);
+        kernel_print("    <unknown>: -- 0x%08x --\n", eip);
     }
     else
     {
@@ -227,6 +227,6 @@ void print_debug_info(uintptr eip)
             fn_name[j] = info.eip_fn_name[j];
         }
         fn_name[j] = '\0';
-        printf("    %s:%d: %s+%d\n", info.eip_file, info.eip_line, fn_name, eip - info.eip_fn_addr);
+        kernel_print("    %s:%d: %s+%d\n", info.eip_file, info.eip_line, fn_name, eip - info.eip_fn_addr);
     }
 }

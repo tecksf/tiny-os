@@ -3,7 +3,7 @@
 #include <env.h>
 #include <error.h>
 #include <x86.h>
-#include <stdio.h>
+#include <console.h>
 #include <string.h>
 #include <synchronous.h>
 #include <arithmetic.h>
@@ -72,7 +72,7 @@ void gdt_init()
 static void physical_memory_manager_init()
 {
     memory_manager = &first_fit_memory_manager;
-    printf("memory management: %s\n", memory_manager->name);
+    kernel_print("memory management: %s\n", memory_manager->name);
     memory_manager->init();
 }
 
@@ -88,7 +88,7 @@ static void physical_page_init()
     struct E820Map *memory_map = (struct E820Map *) (0x8000 + KERNEL_BASE);
     uint64 max_physical_address = 0, start, finish;
 
-    printf("e820map: %d\n", memory_map->num);
+    kernel_print("e820map: %d\n", memory_map->num);
     int i;
     for (i = 0; i < memory_map->num; i++)
     {
@@ -97,7 +97,7 @@ static void physical_page_init()
 
         struct Room room = calculate_room(memory_map->map[i].size);
 
-        printf("  memory: size = %08llx(%2dG %3dM %3dK %3dB), [%08llx, %08llx], type = %d.\n",
+        kernel_print("  memory: size = %08llx(%2dG %3dM %3dK %3dB), [%08llx, %08llx], type = %d.\n",
                memory_map->map[i].size, room.gb, room.mb, room.kb, room.bytes, start, finish - 1, memory_map->map[i].type);
 
         if (memory_map->map[i].type == E820_ADDRESS_RANGE_MEMORY)
@@ -116,7 +116,7 @@ static void physical_page_init()
 
     extern char end[];  // end 定义在 kernel.ld, bss段结束位置
     num_of_physical_page = max_physical_address / PAGE_SIZE;
-    printf("max physical address = %08llx, num of physical page = %d, end = %p\n", max_physical_address, num_of_physical_page, end);
+    kernel_print("max physical address = %08llx, num of physical page = %d, end = %p\n", max_physical_address, num_of_physical_page, end);
 
     // 从end位置开始（按4096对齐后），分配Page结构体，第一个Page结构体永远对应第一个物理页，依次类推
     // 将内核所占的空间 KERNEL_MEMORY_SIZE， 对应的Page设置为已使用
@@ -127,7 +127,7 @@ static void physical_page_init()
     }
 
     uintptr freemem = PhysicalAddress((uintptr) pages + sizeof(struct Page) * num_of_physical_page);
-    printf("freemem = %p\n", freemem);
+    kernel_print("freemem = %p\n", freemem);
 
     // 对空闲的内存（freemem之后）所对应的Page进行初始化
     for (i = 0; i < memory_map->num; i++)
@@ -144,7 +144,7 @@ static void physical_page_init()
 
             if (start < finish)
             {
-                printf("[ start = %08llx, finish = %08llx ]\n", start, finish);
+                kernel_print("[ start = %08llx, finish = %08llx ]\n", start, finish);
                 start = RoundUp(start, PAGE_SIZE);
                 finish = RoundDown((usize) finish, PAGE_SIZE);
                 if (start < finish)
@@ -309,7 +309,7 @@ struct Page *page_dir_alloc_page(pde *page_dir, uintptr linear_address, uint32 p
             swap_map_swappable(virtual_memory_verification, linear_address, page, 0);
             page->pra_vaddr = linear_address;
             assert(get_page_reference(page) == 1);
-            //printf("get No. %d  page: pra_vaddr %x, pra_link.prev %x, pra_link_next %x in pgdir_alloc_page\n", (page-pages), page->pra_vaddr,page->pra_page_link.prev, page->pra_page_link.next);
+            //kernel_print("get No. %d  page: pra_vaddr %x, pra_link.prev %x, pra_link_next %x in pgdir_alloc_page\n", (page-pages), page->pra_vaddr,page->pra_page_link.prev, page->pra_page_link.next);
         }
     }
     return page;

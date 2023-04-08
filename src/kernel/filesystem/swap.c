@@ -2,7 +2,7 @@
 #include "fs.h"
 #include <ide.h>
 #include <physical.h>
-#include <stdio.h>
+#include <console.h>
 #include "manager/fifo.h"
 
 static struct SwapManager *manager;
@@ -46,7 +46,7 @@ int swap_init(void)
     if (r == 0)
     {
         swap_init_ok = 1;
-        printf("SWAP: manager = %s\n", manager->name);
+        kernel_print("SWAP: manager = %s\n", manager->name);
         check_swap();
     }
 
@@ -81,16 +81,16 @@ int swap_out(struct VirtualMemory *memory, int n, int in_tick)
         uintptr v;
         //struct Page **ptr_page=NULL;
         struct Page *page;
-        // printf("i %d, SWAP: call swap_out_victim\n",i);
+        // kernel_print("i %d, SWAP: call swap_out_victim\n",i);
         int r = manager->swap_out_victim(memory, &page, in_tick);
         if (r != 0)
         {
-            printf("i %d, swap_out: call swap_out_victim failed\n", i);
+            kernel_print("i %d, swap_out: call swap_out_victim failed\n", i);
             break;
         }
         //assert(!PageReserved(page));
 
-        //printf("SWAP: choose victim page 0x%08x\n", page);
+        //kernel_print("SWAP: choose victim page 0x%08x\n", page);
 
         v = page->pra_vaddr;
         pte *entry = get_page_table_entry(memory->page_dir, v, 0);
@@ -98,13 +98,13 @@ int swap_out(struct VirtualMemory *memory, int n, int in_tick)
 
         if (swap_fs_write((page->pra_vaddr / PAGE_SIZE + 1) << 8, page) != 0)
         {
-            printf("SWAP: failed to save\n");
+            kernel_print("SWAP: failed to save\n");
             manager->map_swappable(memory, v, page, 0);
             continue;
         }
         else
         {
-            printf("swap_out: i %d, store page in vaddr 0x%x to disk swap entry %d\n", i, v, page->pra_vaddr / PAGE_SIZE + 1);
+            kernel_print("swap_out: i %d, store page in vaddr 0x%x to disk swap entry %d\n", i, v, page->pra_vaddr / PAGE_SIZE + 1);
             *entry = (page->pra_vaddr / PAGE_SIZE + 1) << 8;
             deallocate_pages(page, 1);
         }
@@ -120,14 +120,14 @@ int swap_in(struct VirtualMemory *memory, uintptr address, struct Page **ptr_res
     assert(result != NULL);
 
     pte *entry = get_page_table_entry(memory->page_dir, address, 0);
-    // printf("SWAP: load entry %x swap entry %d to vaddr 0x%08x, page %x, No %d\n", entry, (*entry)>>8, addr, result, (result-pages));
+    // kernel_print("SWAP: load entry %x swap entry %d to vaddr 0x%08x, page %x, No %d\n", entry, (*entry)>>8, addr, result, (result-pages));
 
     int r;
     if ((r = swap_fs_read((*entry), result)) != 0)
     {
         assert(r != 0);
     }
-    printf("swap_in: load disk swap entry %d with swap_page in virtual address 0x%x\n", (*entry) >> 8, address);
+    kernel_print("swap_in: load disk swap entry %d with swap_page in virtual address 0x%x\n", (*entry) >> 8, address);
     *ptr_result = result;
     return 0;
 }

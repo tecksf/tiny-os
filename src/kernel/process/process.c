@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <env.h>
 #include <gdt.h>
-#include <stdio.h>
+#include <console.h>
 #include <error.h>
 #include <string.h>
 #include <assert.h>
@@ -33,9 +33,9 @@ void fork_rets(struct TrapFrame *tf);
 
 static int init_main(void *arg)
 {
-    printf("this init process, pid = %d, name = \"%s\"\n", current_process->pid, get_process_name(current_process));
-    printf("To U: \"%s\".\n", (const char *) arg);
-    printf("To U: \"en.., Bye, Bye. :)\"\n");
+    kernel_print("this init process, pid = %d, name = \"%s\"\n", current_process->pid, get_process_name(current_process));
+    kernel_print("To U: \"%s\".\n", (const char *) arg);
+    kernel_print("To U: \"en.., Bye, Bye. :)\"\n");
     return 0;
 }
 

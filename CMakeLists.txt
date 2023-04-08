@@ -15,14 +15,18 @@ set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/lib)
 include_directories(
     src/base
     src/utils
+    src/libs
     src/kernel/debug
     src/kernel/memory
-    src/kernel/libs
     src/kernel/driver
     src/kernel/interrupt
     src/kernel/filesystem
     src/kernel/core
 )
+
+#include_directories(
+#    src/user/libs
+#)
 
 # ========= bootloader =========
 set(DEFAULT_FLAGS -g -Wall -Os -nostdlib -nostdinc -m32 -fno-builtin)
@@ -41,12 +45,22 @@ set(DISABLE_SIMD -mno-mmx -mno-sse)
 set(CFLAGS -g -Wall -O0 -nostdlib -m32 -fno-builtin -nostdinc -fno-stack-protector ${DISABLE_SIMD})
 set(LD_FLAGS -m32 -nostdlib)
 
+file(GLOB COMMON_LIBS src/libs/*.c)
+
+#file(GLOB_RECURSE USER_SRC src/user/*.c)
+#add_executable(user ${USER_SRC} src/user/libs/init_main.S)
+#target_compile_options(user PUBLIC ${CFLAGS})
+#target_link_options(user PUBLIC -Wl,-T ${CMAKE_SOURCE_DIR}/tools/user.ld ${LD_FLAGS})
+
+
+
 file(GLOB UTILS_SRC src/utils/*.c)
 file(GLOB_RECURSE KERNEL_SRC src/kernel/*.c)
 set(INTER_SRC src/kernel/interrupt/trap_entry.S src/kernel/interrupt/vectors.S)
 set(PROC_SRC src/kernel/process/switch.S src/kernel/process/process_entry.S)
-add_executable(kernel ${KERNEL_SRC} ${INTER_SRC} ${PROC_SRC} ${UTILS_SRC} src/kernel/entry.S)
+add_executable(kernel ${KERNEL_SRC} ${INTER_SRC} ${PROC_SRC} ${UTILS_SRC} ${COMMON_LIBS} src/kernel/entry.S)
 target_compile_options(kernel PUBLIC ${CFLAGS})
+#target_link_libraries(kernel PUBLIC user)
 target_link_options(kernel PUBLIC -Wl,-T ${CMAKE_SOURCE_DIR}/tools/kernel.ld ${LD_FLAGS})
 
 

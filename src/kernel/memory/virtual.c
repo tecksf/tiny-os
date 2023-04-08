@@ -1,9 +1,9 @@
 #include <env.h>
+#include <console.h>
 #include "virtual.h"
 #include "physical.h"
 #include "error.h"
 #include "swap.h"
-#include "stdio.h"
 
 struct VirtualMemory *virtual_memory_verification;
 volatile unsigned int page_fault_num = 0;
@@ -17,19 +17,19 @@ static inline void check_virtual_memory_area_overlap(struct VirtualMemoryArea *p
 
 static void check_virtual_memory_area(void)
 {
-    printf("check_virtual_memory_area() succeeded!\n");
+    kernel_print("check_virtual_memory_area() succeeded!\n");
 }
 
 static void check_page_fault(void)
 {
-    printf("check_page_fault() succeeded!\n");
+    kernel_print("check_page_fault() succeeded!\n");
 }
 
 static void check_virtual_memory(void)
 {
     check_virtual_memory_area();
     check_page_fault();
-    printf("check_virtual_memory() succeeded.\n");
+    kernel_print("check_virtual_memory() succeeded.\n");
 }
 
 void virtual_memory_init(void)
@@ -47,7 +47,7 @@ int do_page_fault(struct VirtualMemory *memory, uint32 error_code, uintptr addre
     struct VirtualMemoryArea *vma = find_virtual_memory_area(memory, address);
     if (vma == NULL || vma->start > address)
     {
-        printf("not valid address %x, and can not find it in vma\n", address);
+        kernel_print("not valid address %x, and can not find it in vma\n", address);
         goto failed;
     }
 
@@ -58,17 +58,17 @@ int do_page_fault(struct VirtualMemory *memory, uint32 error_code, uintptr addre
         case 2: /* error code flag : (W/R=1, P=0): write, not present */
             if (!(vma->flags & VM_WRITE))
             {
-                printf("do_page_fault failed: error code flag = write AND not present, but the addr's vma cannot write\n");
+                kernel_print("do_page_fault failed: error code flag = write AND not present, but the addr's vma cannot write\n");
                 goto failed;
             }
             break;
         case 1: /* error code flag : (W/R=0, P=1): read, present */
-            printf("do_page_fault failed: error code flag = read AND present\n");
+            kernel_print("do_page_fault failed: error code flag = read AND present\n");
             goto failed;
         case 0: /* error code flag : (W/R=0, P=0): read, not present */
             if (!(vma->flags & (VM_READ | VM_EXEC)))
             {
-                printf("do_page_fault failed: error code flag = read AND not present, but the addr's vma cannot read or exec\n");
+                kernel_print("do_page_fault failed: error code flag = read AND not present, but the addr's vma cannot read or exec\n");
                 goto failed;
             }
     }
@@ -85,7 +85,7 @@ int do_page_fault(struct VirtualMemory *memory, uint32 error_code, uintptr addre
     pte *entry = NULL;
     if ((entry = get_page_table_entry(memory->page_dir, address, 1)) == NULL)
     {
-        printf("get_pte in do_page_fault failed\n");
+        kernel_print("get_pte in do_page_fault failed\n");
         goto failed;
     }
 
@@ -94,7 +94,7 @@ int do_page_fault(struct VirtualMemory *memory, uint32 error_code, uintptr addre
         // 页表项为0,则物理页不存在, 分配一个新页，并映射到物理地址和逻辑地址
         if (page_dir_alloc_page(memory->page_dir, address, perm) == NULL)
         {
-            printf("page_dir_alloc_page in do_page_fault failed\n");
+            kernel_print("page_dir_alloc_page in do_page_fault failed\n");
             goto failed;
         }
     }
@@ -107,7 +107,7 @@ int do_page_fault(struct VirtualMemory *memory, uint32 error_code, uintptr addre
             struct Page *page = NULL;
             if ((rc = swap_in(memory, address, &page)) != 0)
             {
-                printf("swap_in in do_page_fault failed\n");
+                kernel_print("swap_in in do_page_fault failed\n");
                 goto failed;
             }
             page_insert(memory->page_dir, page, address, perm);
@@ -116,7 +116,7 @@ int do_page_fault(struct VirtualMemory *memory, uint32 error_code, uintptr addre
         }
         else
         {
-            printf("no swap_init_ok but entry is %x, failed\n", *entry);
+            kernel_print("no swap_init_ok but entry is %x, failed\n", *entry);
             goto failed;
         }
     }

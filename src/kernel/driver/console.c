@@ -1,6 +1,8 @@
 #include <x86.h>
 #include <string.h>
 #include <layout.h>
+#include <format.h>
+#include "console.h"
 
 #define LPTPORT 0x378
 
@@ -151,4 +153,44 @@ void cons_putc(int c)
 {
     lpt_putc(c);
     cga_putc(c);
+}
+
+static void put_char_with_count(int c, int *cnt)
+{
+    cons_putc(c);
+    (*cnt)++;
+}
+
+void kernel_put_char(int c)
+{
+    cons_putc(c);
+}
+
+int kernel_puts(const char *str)
+{
+    int cnt = 0;
+    char c;
+    while ((c = *str++) != '\0')
+    {
+        put_char_with_count(c, &cnt);
+    }
+    put_char_with_count('\n', &cnt);
+    return cnt;
+}
+
+int kernel_print(const char *fmt, ...)
+{
+    va_list ap;
+    int cnt;
+    va_start(ap, fmt);
+    format_output((void *) put_char_with_count, &cnt, fmt, ap);
+    va_end(ap);
+    return cnt;
+}
+
+int variant_print(const char *fmt, va_list ap)
+{
+    int cnt;
+    format_output((void *) put_char_with_count, &cnt, fmt, ap);
+    return cnt;
 }
