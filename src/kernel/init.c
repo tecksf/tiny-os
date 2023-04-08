@@ -2,6 +2,7 @@
 // Created by tang on 3/12/23.
 //
 #include <stdio.h>
+#include "core/env.h"
 #include "driver/console.h"
 #include "driver/clock.h"
 #include "driver/keyboard.h"
@@ -12,6 +13,7 @@
 #include "memory/virtual.h"
 #include "filesystem/swap.h"
 #include "debug/kernel_print.h"
+#include "process/process.h"
 
 void kernel_init(void)
 {
@@ -32,11 +34,13 @@ void kernel_init(void)
     ide_init();
     swap_init();
 
+    process_init();
+
 //    clock_init();
 
     keyboard_init();
 
     cpu_interrupt_enable();
 
-    while (1);
+    cpu_idle();
 }

@@ -3,7 +3,7 @@ project(foots_stone C)
 
 enable_language(ASM C)
 
-set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD 11)
 
 #add_executable(sign tools/sign.c)
 
@@ -14,6 +14,7 @@ set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/lib)
 
 include_directories(
     src/base
+    src/utils
     src/kernel/debug
     src/kernel/memory
     src/kernel/libs
@@ -36,12 +37,15 @@ add_custom_target(write_boot_block
     DEPENDS boot_block)
 # ========= bootloader =========
 
-set(CFLAGS -g -Wall -O0 -nostdlib -m32 -fno-builtin -nostdinc -fno-stack-protector)
+set(DISABLE_SIMD -mno-mmx -mno-sse)
+set(CFLAGS -g -Wall -O0 -nostdlib -m32 -fno-builtin -nostdinc -fno-stack-protector ${DISABLE_SIMD})
 set(LD_FLAGS -m32 -nostdlib)
 
+file(GLOB UTILS_SRC src/utils/*.c)
 file(GLOB_RECURSE KERNEL_SRC src/kernel/*.c)
 set(INTER_SRC src/kernel/interrupt/trap_entry.S src/kernel/interrupt/vectors.S)
-add_executable(kernel ${KERNEL_SRC} ${INTER_SRC} src/kernel/entry.S)
+set(PROC_SRC src/kernel/process/switch.S src/kernel/process/process_entry.S)
+add_executable(kernel ${KERNEL_SRC} ${INTER_SRC} ${PROC_SRC} ${UTILS_SRC} src/kernel/entry.S)
 target_compile_options(kernel PUBLIC ${CFLAGS})
 target_link_options(kernel PUBLIC -Wl,-T ${CMAKE_SOURCE_DIR}/tools/kernel.ld ${LD_FLAGS})
 
@@ -56,6 +60,9 @@ add_custom_target(create_image
 add_custom_target(start_qemu
     COMMAND qemu-system-i386 -no-reboot -parallel stdio -hda ${CMAKE_CURRENT_BINARY_DIR}/${IMAGE} -serial null
     DEPENDS create_image)
+
+add_executable(debug_os IMPORTED debug.sh)
+
 
 add_custom_command(TARGET create_image
     POST_BUILD

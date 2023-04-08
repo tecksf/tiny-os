@@ -40,6 +40,6 @@ __trap_ret:
 
 .globl fork_rets
 fork_rets:
-    # set stack to this new process's trapframe
+    # 把 %esp 设置为新进程(to) TrapFrame 首地址
     movl 4(%esp), %esp
     jmp __trap_ret

@@ -2,6 +2,7 @@
 #define __INTERRUPT_SYNCHRONOUS_H__
 
 #include <x86.h>
+#include <gdt.h>
 #include "picirq.h"
 
 static inline bool __interrupt_save(void)

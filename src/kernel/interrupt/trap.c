@@ -147,11 +147,11 @@ static void trap_dispatch(struct TrapFrame *tf)
     switch (tf->tf_trapno)
     {
         case T_PGFLT:
-            if ((rc = page_fault_handler(tf)) != 0)
-            {
-                print_trap_frame(tf);
-                panic("handle page fault failed. %e\n", rc);
-            }
+//            if ((rc = page_fault_handler(tf)) != 0)
+//            {
+//                print_trap_frame(tf);
+//                panic("handle page fault failed. %e\n", rc);
+//            }
             break;
         case IRQ_OFFSET + IRQ_TIMER:
             ticks++;
@@ -169,7 +169,7 @@ static void trap_dispatch(struct TrapFrame *tf)
             /* do nothing */
             break;
         default:
-            printf("default trap dispatch, trap number = %d\n", tf->tf_trapno);
+//            printf("default trap dispatch, trap number = %d\n", tf->tf_trapno);
             break;
     }
 }
