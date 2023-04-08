@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <synchronous.h>
+#include <arithmetic.h>
 #include <swap.h>
 #include "manager/first_fit.h"
 
@@ -31,8 +32,6 @@ const struct PhysicalMemoryManager *memory_manager;
 struct Page *pages;
 usize num_of_physical_page = 0; // 物理内存的总页数
 
-extern char boot_stack[], boot_stack_top[];
-extern pde __boot_page_dir;
 pde *boot_page_dir = &__boot_page_dir;
 uintptr boot_cr3;
 
@@ -48,7 +47,7 @@ static inline void load_gdt(struct Arch *arch)
     asm volatile("ljmp %0, $1f\n 1:\n"::"i"(KERNEL_CS));
 }
 
-static void load_esp0(uintptr esp0)
+void load_esp0(uintptr esp0)
 {
     ts.ts_esp0 = esp0;
 }
@@ -95,8 +94,11 @@ static void physical_page_init()
     {
         start = memory_map->map[i].address;
         finish = start + memory_map->map[i].size;
-        printf("  memory: size = %08llx, [%08llx, %08llx], type = %d.\n",
-               memory_map->map[i].size, start, finish - 1, memory_map->map[i].type);
+
+        struct Room room = calculate_room(memory_map->map[i].size);
+
+        printf("  memory: size = %08llx(%2dG %3dM %3dK %3dB), [%08llx, %08llx], type = %d.\n",
+               memory_map->map[i].size, room.gb, room.mb, room.kb, room.bytes, start, finish - 1, memory_map->map[i].type);
 
         if (memory_map->map[i].type == E820_ADDRESS_RANGE_MEMORY)
         {

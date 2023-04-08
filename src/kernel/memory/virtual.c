@@ -8,16 +8,16 @@
 struct VirtualMemory *virtual_memory_verification;
 volatile unsigned int page_fault_num = 0;
 
-static inline void check_virtual_memory_address_overlap(struct VirtualMemoryAddress *prev, struct VirtualMemoryAddress *next)
+static inline void check_virtual_memory_area_overlap(struct VirtualMemoryArea *prev, struct VirtualMemoryArea *next)
 {
     assert(prev->start < prev->end);
     assert(prev->end <= next->start);
     assert(next->start < next->end);
 }
 
-static void check_virtual_memory_address(void)
+static void check_virtual_memory_area(void)
 {
-    printf("check_virtual_memory_address() succeeded!\n");
+    printf("check_virtual_memory_area() succeeded!\n");
 }
 
 static void check_page_fault(void)
@@ -27,7 +27,7 @@ static void check_page_fault(void)
 
 static void check_virtual_memory(void)
 {
-    check_virtual_memory_address();
+    check_virtual_memory_area();
     check_page_fault();
     printf("check_virtual_memory() succeeded.\n");
 }
@@ -44,7 +44,7 @@ int do_page_fault(struct VirtualMemory *memory, uint32 error_code, uintptr addre
     page_fault_num++;
 
     // 先确认是否为合法的虚拟页地址
-    struct VirtualMemoryAddress *vma = find_virtual_memory_address(memory, address);
+    struct VirtualMemoryArea *vma = find_virtual_memory_area(memory, address);
     if (vma == NULL || vma->start > address)
     {
         printf("not valid address %x, and can not find it in vma\n", address);
@@ -151,28 +151,28 @@ void destroy_virtual_memory(struct VirtualMemory *memory)
     while ((le = list_next(list)) != list)
     {
         list_del(le);
-        kernel_free(OffsetOfVirtualMemoryAddress(le, list_link), sizeof(struct VirtualMemoryAddress));
+        kernel_free(OffsetOfVirtualMemoryArea(le, list_link), sizeof(struct VirtualMemoryArea));
     }
     kernel_free(memory, sizeof(struct VirtualMemory));
 }
 
 
-struct VirtualMemoryAddress *create_virtual_memory_address(uintptr start, uintptr end, uint32 flags)
+struct VirtualMemoryArea *create_virtual_memory_address(uintptr start, uintptr end, uint32 flags)
 {
-    struct VirtualMemoryAddress *address = kernel_malloc(sizeof(struct VirtualMemoryAddress));
+    struct VirtualMemoryArea *vma = kernel_malloc(sizeof(struct VirtualMemoryArea));
 
-    if (address != NULL)
+    if (vma != NULL)
     {
-        address->start = start;
-        address->end = end;
-        address->flags = flags;
+        vma->start = start;
+        vma->end = end;
+        vma->flags = flags;
     }
-    return address;
+    return vma;
 }
 
-struct VirtualMemoryAddress *find_virtual_memory_address(struct VirtualMemory *memory, uintptr address)
+struct VirtualMemoryArea *find_virtual_memory_area(struct VirtualMemory *memory, uintptr address)
 {
-    struct VirtualMemoryAddress *vma = NULL;
+    struct VirtualMemoryArea *vma = NULL;
     if (memory != NULL)
     {
         vma = memory->mmap_cache;
@@ -182,7 +182,7 @@ struct VirtualMemoryAddress *find_virtual_memory_address(struct VirtualMemory *m
             ListEntry *list = &(memory->mmap_list), *le = list;
             while ((le = list_next(le)) != list)
             {
-                vma = OffsetOfVirtualMemoryAddress(le, list_link);
+                vma = OffsetOfVirtualMemoryArea(le, list_link);
                 if (vma->start <= address && address < vma->end)
                 {
                     found = 1;
@@ -202,17 +202,17 @@ struct VirtualMemoryAddress *find_virtual_memory_address(struct VirtualMemory *m
     return vma;
 }
 
-void insert_virtual_memory_address(struct VirtualMemory *memory, struct VirtualMemoryAddress *address)
+void insert_virtual_memory_area(struct VirtualMemory *memory, struct VirtualMemoryArea *area)
 {
-    assert(address->start < address->end);
+    assert(area->start < area->end);
     ListEntry *list = &(memory->mmap_list);
     ListEntry *le_prev = list, *le_next;
 
     ListEntry *le = list;
     while ((le = list_next(le)) != list)
     {
-        struct VirtualMemoryAddress *mmap_prev = OffsetOfVirtualMemoryAddress(le, list_link);
-        if (mmap_prev->start > address->start)
+        struct VirtualMemoryArea *mmap_prev = OffsetOfVirtualMemoryArea(le, list_link);
+        if (mmap_prev->start > area->start)
             break;
 
         le_prev = le;
@@ -222,12 +222,12 @@ void insert_virtual_memory_address(struct VirtualMemory *memory, struct VirtualM
 
     /* 检查虚拟内存段是否有重叠 */
     if (le_prev != list)
-        check_virtual_memory_address_overlap(OffsetOfVirtualMemoryAddress(le_prev, list_link), address);
+        check_virtual_memory_area_overlap(OffsetOfVirtualMemoryArea(le_prev, list_link), area);
     if (le_next != list)
-        check_virtual_memory_address_overlap(address, OffsetOfVirtualMemoryAddress(le_next, list_link));
+        check_virtual_memory_area_overlap(area, OffsetOfVirtualMemoryArea(le_next, list_link));
 
-    address->virtual_memory = memory;
-    list_add_after(le_prev, &(address->list_link));
+    area->virtual_memory = memory;
+    list_add_after(le_prev, &(area->list_link));
 
     memory->map_count++;
 }

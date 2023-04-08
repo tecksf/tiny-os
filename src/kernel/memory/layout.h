@@ -1,6 +1,7 @@
 #ifndef __MEMORY_LAYOUT_H__
 #define __MEMORY_LAYOUT_H__
 
+#define PAGE_SIZE                       4096
 #define KERNEL_BASE                     0xC0000000              // 内核线性地址基址 3G
 #define KERNEL_MEMORY_SIZE              0x38000000              // 内核大小
 #define KERNEL_TOP                      (KERNEL_BASE + KERNEL_MEMORY_SIZE)

@@ -73,6 +73,7 @@ void deallocate_pages(struct Page *base, usize n);
 void *kernel_malloc(usize n);
 void kernel_free(void *ptr, usize n);
 void tlb_invalidate(pde *page_dir, uintptr linear_address);
+void load_esp0(uintptr esp0);
 pte *get_page_table_entry(pde *page_dir, uintptr linear_address, bool create);
 int page_insert(pde *page_dir, struct Page *page, uintptr linear_address, uint32 perm);
 void page_remove(pde *page_dir, uintptr linear_address);
