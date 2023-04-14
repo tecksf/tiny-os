@@ -11,6 +11,24 @@ set(CMAKE_C_STANDARD 11)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/lib)
 
+#function(create_image_derive_from_exe)
+#  set(Options OPTIONAL)
+#  set(OneValueArgs IMAGE_NAME SECTIONS_PER_EXE EXE_PATHS)
+#  set(MultiValueArgs NAMES)
+#
+#  cmake_parse_arguments(ELK "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+#
+#  set(IMAGE_NAME ${ELK_IMAGE_NAME}.img)
+#  set(START_SECTION 0)
+#  execute_process(COMMAND dd if=/dev/zero of=${IMAGE_NAME} count=10000)
+#
+#  foreach (F ${ELK_EXE_PATHS})
+#    execute_process(COMMAND dd if=${F} of=${IMAGE_NAME} seek=${START_SECTION} conv=notrunc)
+#    math(EXPR START_SECTION "${START_SECTION}+${ELK_SECTIONS_PER_EXE}")
+#  endforeach ()
+#
+#endfunction()
+
 
 include_directories(
     src/base
@@ -23,10 +41,6 @@ include_directories(
     src/kernel/filesystem
     src/kernel/core
 )
-
-#include_directories(
-#    src/user/libs
-#)
 
 # ========= bootloader =========
 set(DEFAULT_FLAGS -g -Wall -Os -nostdlib -nostdinc -m32 -fno-builtin)
@@ -42,45 +56,60 @@ add_custom_target(write_boot_block
 # ========= bootloader =========
 
 set(DISABLE_SIMD -mno-mmx -mno-sse)
-set(CFLAGS -g -Wall -O0 -nostdlib -m32 -fno-builtin -nostdinc -fno-stack-protector ${DISABLE_SIMD})
-set(LD_FLAGS -m32 -nostdlib)
+set(CFLAGS -g -Wall -O0 -nostdlib -m32 -no-pie -fno-builtin -nostdinc -fno-stack-protector ${DISABLE_SIMD})
+set(LD_FLAGS -m32 -nostdlib -Wl,--trace)
 
 file(GLOB COMMON_LIBS src/libs/*.c)
-
-#file(GLOB_RECURSE USER_SRC src/user/*.c)
-#add_executable(user ${USER_SRC} src/user/libs/init_main.S)
-#target_compile_options(user PUBLIC ${CFLAGS})
-#target_link_options(user PUBLIC -Wl,-T ${CMAKE_SOURCE_DIR}/tools/user.ld ${LD_FLAGS})
-
-
-
 file(GLOB UTILS_SRC src/utils/*.c)
+
+# ========= kernel =========
+
 file(GLOB_RECURSE KERNEL_SRC src/kernel/*.c)
 set(INTER_SRC src/kernel/interrupt/trap_entry.S src/kernel/interrupt/vectors.S)
 set(PROC_SRC src/kernel/process/switch.S src/kernel/process/process_entry.S)
 add_executable(kernel ${KERNEL_SRC} ${INTER_SRC} ${PROC_SRC} ${UTILS_SRC} ${COMMON_LIBS} src/kernel/entry.S)
 target_compile_options(kernel PUBLIC ${CFLAGS})
-#target_link_libraries(kernel PUBLIC user)
-target_link_options(kernel PUBLIC -Wl,-T ${CMAKE_SOURCE_DIR}/tools/kernel.ld ${LD_FLAGS})
+target_link_options(kernel PUBLIC ${LD_FLAGS} -Wl,-T ${CMAKE_SOURCE_DIR}/tools/kernel.ld)
 
+# ========= kernel =========
 
-set(IMAGE kernel.img)
-add_custom_target(create_image
-    COMMAND dd if=/dev/zero of=${IMAGE} count=10000
-    COMMAND dd if=${EXECUTABLE_OUTPUT_PATH}/boot_block_bin of=${IMAGE} conv=notrunc
-    COMMAND dd if=${EXECUTABLE_OUTPUT_PATH}/kernel of=${IMAGE} seek=1 conv=notrunc
+set(KERNEL_IMAGE kernel.img)
+add_custom_target(create_kernel_image
+    COMMAND dd if=/dev/zero of=${KERNEL_IMAGE} count=10000
+    COMMAND dd if=${EXECUTABLE_OUTPUT_PATH}/boot_block_bin of=${KERNEL_IMAGE} conv=notrunc
+    COMMAND dd if=${EXECUTABLE_OUTPUT_PATH}/kernel of=${KERNEL_IMAGE} seek=1 conv=notrunc
     DEPENDS write_boot_block kernel)
 
-add_custom_target(start_qemu
-    COMMAND qemu-system-i386 -no-reboot -parallel stdio -hda ${CMAKE_CURRENT_BINARY_DIR}/${IMAGE} -serial null
-    DEPENDS create_image)
 
-add_executable(debug_os IMPORTED debug.sh)
-
-
-add_custom_command(TARGET create_image
+set(SWAP_IMAGE swap.img)
+set(USER_IMAGE user.img)
+set(TEMP_IMAGE temp.img)
+add_custom_command(TARGET create_kernel_image
     POST_BUILD
-    COMMAND dd if=/dev/zero of=disk2.img count=10000
-    COMMAND dd if=/dev/zero of=disk3.img count=10000
-    COMMAND dd if=/dev/zero of=disk4.img count=10000
+    COMMAND dd if=/dev/zero of=${SWAP_IMAGE} count=10000
+    COMMAND dd if=/dev/zero of=${USER_IMAGE} count=10000
+    COMMAND dd if=/dev/zero of=${TEMP_IMAGE} count=10000
     VERBATIM)
+
+
+set(START_SECTION 0)
+list(APPEND APPS)
+file(GLOB USER_LIBS src/user/libs/*.c)
+file(GLOB USER_SRC src/user/*.c)
+
+foreach (F ${USER_SRC})
+  get_filename_component(APP_NAME ${F} NAME_WE)
+  add_executable(${APP_NAME} ${F} ${USER_LIBS} ${COMMON_LIBS} src/user/libs/init_main.S)
+  target_include_directories(${APP_NAME} PUBLIC src/libs src/user/libs)
+  target_compile_options(${APP_NAME} PUBLIC ${CFLAGS})
+  target_link_options(${APP_NAME} PUBLIC -Wl,-T ${CMAKE_SOURCE_DIR}/tools/user.ld ${LD_FLAGS})
+
+  list(APPEND APPS ${APP_NAME})
+  add_custom_command(TARGET create_kernel_image
+      POST_BUILD
+      COMMAND dd if=${EXECUTABLE_OUTPUT_PATH}/${APP_NAME} of=${USER_IMAGE} seek=${START_SECTION} conv=notrunc
+      VERBATIM)
+  math(EXPR START_SECTION "${START_SECTION}+4")
+endforeach ()
+
+add_dependencies(kernel ${APPS})
