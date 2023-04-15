@@ -1,27 +1,11 @@
 #include "syscall.h"
-#include <defs.h>
+#include <unistd.h>
+#include <stdio.h>
 #include <stdarg.h>
+#include <trap.h>
 
 #define MAX_ARGS 5
 
-#define T_SYSCALL           0x80
-
-#define SYS_EXIT            1
-#define SYS_FORK            2
-#define SYS_WAIT            3
-#define SYS_EXEC            4
-#define SYS_CLONE           5
-#define SYS_YIELD           10
-#define SYS_SLEEP           11
-#define SYS_KILL            12
-#define SYS_GET_TIME        17
-#define SYS_GET_PID         18
-#define SYS_BRK             19
-#define SYS_MMAP            20
-#define SYS_MUNMAP          21
-#define SYS_SHMEM           22
-#define SYS_PUTC            30
-#define SYS_PGDIR           31
 
 static inline int syscall(int num, ...)
 {
@@ -49,32 +33,39 @@ static inline int syscall(int num, ...)
     return rc;
 }
 
-int system_exit(int error_code)
+void exit(int error_code)
 {
-    return syscall(SYS_EXIT, error_code);
+    syscall(SYS_EXIT, error_code);
+    printf("BUG: exit failed.\n");
+    while (1);
 }
 
-int system_fork(void)
+int fork(void)
 {
     return syscall(SYS_FORK);
 }
 
-int system_wait(int pid, int *store)
+int wait(void)
+{
+    return syscall(SYS_WAIT, 0, NULL);
+}
+
+int waitpid(int pid, int *store)
 {
     return syscall(SYS_WAIT, pid, store);
 }
 
-int system_yield(void)
+void yield(void)
 {
-    return syscall(SYS_YIELD);
+    syscall(SYS_YIELD);
 }
 
-int system_kill(int pid)
+int kill(int pid)
 {
     return syscall(SYS_KILL, pid);
 }
 
-int system_get_pid(void)
+int getpid(void)
 {
     return syscall(SYS_GET_PID);
 }

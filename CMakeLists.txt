@@ -37,6 +37,7 @@ include_directories(
     src/kernel/debug
     src/kernel/memory
     src/kernel/driver
+    src/kernel/process
     src/kernel/interrupt
     src/kernel/filesystem
     src/kernel/core

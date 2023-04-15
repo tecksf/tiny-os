@@ -5,6 +5,10 @@
 
 #define EI_NIDENT   16
 #define ELF_MAGIC   0x464C457FU            // "\x7FELF" in little endian
+#define ELF_PT_LOAD 1
+#define ELF_PF_X    1
+#define ELF_PF_W    2
+#define ELF_PF_R    4
 
 struct ElfHeader {
     uint32 e_magic;     // must equal ELF_MAGIC

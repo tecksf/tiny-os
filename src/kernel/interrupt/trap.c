@@ -5,6 +5,7 @@
 #include <console.h>
 #include <assert.h>
 #include <env.h>
+#include <system.h>
 #include "virtual.h"
 #include "picirq.h"
 #include "trap.h"
@@ -27,6 +28,7 @@ void idt_init()
     {
         SetGate(idt[i], 0, GD_KTEXT, __vectors[i], DPL_KERNEL);
     }
+    SetGate(idt[T_SYSCALL], 1, GD_KTEXT, __vectors[T_SYSCALL], DPL_USER);
 
     // 将IDT地址和大小加载到IDTR寄存器中
     lidt(&idt_pd);
@@ -152,6 +154,9 @@ static void trap_dispatch(struct TrapFrame *tf)
 //                print_trap_frame(tf);
 //                panic("handle page fault failed. %e\n", rc);
 //            }
+            break;
+        case T_SYSCALL:
+            system_execute();
             break;
         case IRQ_OFFSET + IRQ_TIMER:
             ticks++;

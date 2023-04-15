@@ -24,6 +24,8 @@
 #define T_MCHK          18   // machine check
 #define T_SIMDERR       19   // SIMD floating point error
 
+#define T_SYSCALL       0x80
+
 #define IRQ_TIMER       0
 #define IRQ_KBD         1
 #define IRQ_COM1        4
@@ -68,5 +70,8 @@ struct TrapFrame
 
 void idt_init();
 void trap(struct TrapFrame *tf);
+
+void print_regs(struct PushRegs *regs);
+void print_trap_frame(struct TrapFrame *tf);
 
 #endif // __INTERRUPT_TRAP_H__

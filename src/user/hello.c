@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <system.h>
+#include "syscall.h"
 
 int main(void)
 {
