@@ -5,7 +5,7 @@
 #include "error.h"
 #include "swap.h"
 
-struct VirtualMemory *virtual_memory_verification;
+struct VirtualMemory *virtual_memory_verification = NULL;
 volatile unsigned int page_fault_num = 0;
 
 static inline void check_virtual_memory_area_overlap(struct VirtualMemoryArea *prev, struct VirtualMemoryArea *next)
@@ -156,8 +156,76 @@ void destroy_virtual_memory(struct VirtualMemory *memory)
     kernel_free(memory, sizeof(struct VirtualMemory));
 }
 
+int build_virtual_memory_mapping(struct VirtualMemory *memory, uintptr address, usize len, uint32 vm_flags)
+{
+    assert(memory != NULL);
 
-struct VirtualMemoryArea *create_virtual_memory_address(uintptr start, uintptr end, uint32 flags)
+    int ret = -E_INVAL;
+    uintptr start = RoundDown(address, PAGE_SIZE), end = RoundUp(address + len, PAGE_SIZE);
+    if (!UserAccess(start, end))
+    {
+        return ret;
+    }
+
+    struct VirtualMemoryArea *area;
+    if ((area = find_virtual_memory_area(memory, start)) != NULL && end > area->start)
+    {
+        return ret;
+    }
+
+    if ((area = create_virtual_memory_area(start, end, vm_flags)) == NULL)
+    {
+        return -E_NO_MEM;
+    }
+
+    insert_virtual_memory_area(memory, area);
+    return 0;
+}
+
+int duplicate_virtual_memory_mapping(struct VirtualMemory *to, struct VirtualMemory *from)
+{
+    assert(to != NULL && from != NULL);
+    ListEntry *list = &(from->mmap_list), *le = list;
+    while ((le = list_prev(le)) != list)
+    {
+        struct VirtualMemoryArea *vma, *nvma;
+        vma = OffsetOfVirtualMemoryArea(le, list_link);
+        nvma = create_virtual_memory_area(vma->start, vma->end, vma->flags);
+        if (nvma == NULL)
+        {
+            return -E_NO_MEM;
+        }
+
+        insert_virtual_memory_area(to, nvma);
+
+        bool share = 0;
+//        if (copy_range(to->pgdir, from->pgdir, vma->vm_start, vma->vm_end, share) != 0)
+//        {
+//            return -E_NO_MEM;
+//        }
+    }
+    return 0;
+}
+
+void exit_virtual_memory_mapping(struct VirtualMemory *memory)
+{
+    assert(memory != NULL && get_shared_count(memory) == 0);
+    pde *page_dir = memory->page_dir;
+    ListEntry *list = &(memory->mmap_list), *le = list;
+//    while ((le = list_next(le)) != list)
+//    {
+//        struct VirtualMemoryArea *vma = OffsetOfVirtualMemoryArea(le, list_link);
+//        unmap_range(page_dir, vma->start, vma->end);
+//    }
+//
+//    while ((le = list_next(le)) != list)
+//    {
+//        struct VirtualMemoryArea *vma = OffsetOfVirtualMemoryArea(le, list_link);
+//        exit_range(page_dir, vma->start, vma->end);
+//    }
+}
+
+struct VirtualMemoryArea *create_virtual_memory_area(uintptr start, uintptr end, uint32 flags)
 {
     struct VirtualMemoryArea *vma = kernel_malloc(sizeof(struct VirtualMemoryArea));
 
@@ -178,14 +246,14 @@ struct VirtualMemoryArea *find_virtual_memory_area(struct VirtualMemory *memory,
         vma = memory->mmap_cache;
         if (!(vma != NULL && vma->start <= address && vma->end > address))
         {
-            bool found = 0;
+            bool found = false;
             ListEntry *list = &(memory->mmap_list), *le = list;
             while ((le = list_next(le)) != list)
             {
                 vma = OffsetOfVirtualMemoryArea(le, list_link);
                 if (vma->start <= address && address < vma->end)
                 {
-                    found = 1;
+                    found = true;
                     break;
                 }
             }
@@ -230,4 +298,40 @@ void insert_virtual_memory_area(struct VirtualMemory *memory, struct VirtualMemo
     list_add_after(le_prev, &(area->list_link));
 
     memory->map_count++;
+}
+
+// 查看区间是不是属于一个用户进程的内存空间
+bool user_memory_verification(struct VirtualMemory *memory, uintptr address, usize len, bool write)
+{
+    if (memory != NULL)
+    {
+        if (!UserAccess(address, address + len))
+        {
+            return false;
+        }
+
+        struct VirtualMemoryArea *vma;
+        uintptr start = address, end = address + len;
+        while (start < end)
+        {
+            if ((vma = find_virtual_memory_area(memory, start)) == NULL || start < vma->start)
+            {
+                return false;
+            }
+            if (!(vma->flags & ((write) ? VM_WRITE : VM_READ)))
+            {
+                return false;
+            }
+            if (write && (vma->flags & VM_STACK))
+            {
+                if (start < vma->start + PAGE_SIZE)
+                {
+                    return false;
+                }
+            }
+            start = vma->end;
+        }
+        return true;
+    }
+    return KernelAccess(address, address + len);
 }

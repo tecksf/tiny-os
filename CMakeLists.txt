@@ -11,24 +11,6 @@ set(CMAKE_C_STANDARD 11)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/lib)
 
-#function(create_image_derive_from_exe)
-#  set(Options OPTIONAL)
-#  set(OneValueArgs IMAGE_NAME SECTIONS_PER_EXE EXE_PATHS)
-#  set(MultiValueArgs NAMES)
-#
-#  cmake_parse_arguments(ELK "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
-#
-#  set(IMAGE_NAME ${ELK_IMAGE_NAME}.img)
-#  set(START_SECTION 0)
-#  execute_process(COMMAND dd if=/dev/zero of=${IMAGE_NAME} count=10000)
-#
-#  foreach (F ${ELK_EXE_PATHS})
-#    execute_process(COMMAND dd if=${F} of=${IMAGE_NAME} seek=${START_SECTION} conv=notrunc)
-#    math(EXPR START_SECTION "${START_SECTION}+${ELK_SECTIONS_PER_EXE}")
-#  endforeach ()
-#
-#endfunction()
-
 
 include_directories(
     src/base
@@ -98,19 +80,22 @@ list(APPEND APPS)
 file(GLOB USER_LIBS src/user/libs/*.c)
 file(GLOB USER_SRC src/user/*.c)
 
+
+set(USER_CFLAGS -Wall -Os -s -nostdlib -m32 -fno-builtin -fno-stack-protector -nostdinc ${DISABLE_SIMD})
+set(USER_LD_FLAGS -m32 -nostdlib -no-pie -Wl,--build-id=none)
 foreach (F ${USER_SRC})
   get_filename_component(APP_NAME ${F} NAME_WE)
   add_executable(${APP_NAME} ${F} ${USER_LIBS} ${COMMON_LIBS} src/user/libs/init_main.S)
   target_include_directories(${APP_NAME} PUBLIC src/libs src/user/libs)
-  target_compile_options(${APP_NAME} PUBLIC ${CFLAGS})
-  target_link_options(${APP_NAME} PUBLIC -Wl,-T ${CMAKE_SOURCE_DIR}/tools/user.ld ${LD_FLAGS})
+  target_compile_options(${APP_NAME} PUBLIC ${USER_CFLAGS})
+  target_link_options(${APP_NAME} PUBLIC ${USER_LD_FLAGS} -Wl,-T ${CMAKE_SOURCE_DIR}/tools/user.ld)
 
   list(APPEND APPS ${APP_NAME})
   add_custom_command(TARGET create_kernel_image
       POST_BUILD
       COMMAND dd if=${EXECUTABLE_OUTPUT_PATH}/${APP_NAME} of=${USER_IMAGE} seek=${START_SECTION} conv=notrunc
       VERBATIM)
-  math(EXPR START_SECTION "${START_SECTION}+4")
+  math(EXPR START_SECTION "${START_SECTION}+8")
 endforeach ()
 
 add_dependencies(kernel ${APPS})

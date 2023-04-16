@@ -14,6 +14,7 @@
 #include "filesystem/swap.h"
 #include "debug/kernel_print.h"
 #include "process/process.h"
+#include "process/load.h"
 
 void kernel_init(void)
 {
@@ -33,6 +34,8 @@ void kernel_init(void)
 
     ide_init();
     swap_init();
+
+    load_program();
 
     process_init();
 

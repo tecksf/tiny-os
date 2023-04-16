@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <env.h>
 #include <system.h>
+#include <process.h>
 #include "virtual.h"
 #include "picirq.h"
 #include "trap.h"
@@ -127,9 +128,9 @@ static inline void print_page_fault(struct TrapFrame *tf)
      * bit 2 == 0 means kernel, 1 means user
      * */
     kernel_print("page fault at 0x%08x: %c/%c [%s].\n", rcr2(),
-           (tf->tf_err & 4) ? 'U' : 'K',
-           (tf->tf_err & 2) ? 'W' : 'R',
-           (tf->tf_err & 1) ? "protection fault" : "no page found");
+                 (tf->tf_err & 4) ? 'U' : 'K',
+                 (tf->tf_err & 2) ? 'W' : 'R',
+                 (tf->tf_err & 1) ? "protection fault" : "no page found");
 }
 
 static int page_fault_handler(struct TrapFrame *tf)
@@ -149,14 +150,14 @@ static void trap_dispatch(struct TrapFrame *tf)
     switch (tf->tf_trapno)
     {
         case T_PGFLT:
-//            if ((rc = page_fault_handler(tf)) != 0)
-//            {
-//                print_trap_frame(tf);
-//                panic("handle page fault failed. %e\n", rc);
-//            }
+            if ((rc = page_fault_handler(tf)) != 0)
+            {
+                print_trap_frame(tf);
+                panic("handle page fault failed. %e\n", rc);
+            }
             break;
         case T_SYSCALL:
-            system_execute();
+            system_execute(tf);
             break;
         case IRQ_OFFSET + IRQ_TIMER:
             ticks++;
@@ -181,5 +182,10 @@ static void trap_dispatch(struct TrapFrame *tf)
 
 void trap(struct TrapFrame *tf)
 {
+    struct TrapFrame *prev = current_process->tf;
+    current_process->tf = tf;
+
     trap_dispatch(tf);
+
+    current_process->tf = prev;
 }

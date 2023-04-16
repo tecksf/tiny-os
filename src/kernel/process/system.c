@@ -76,9 +76,8 @@ static int (*syscall_table[])(uint32 arg[]) = {
 
 #define NUM_SYSTEM_CALLS ((sizeof(syscall_table)) / (sizeof(syscall_table[0])))
 
-void system_execute(void)
+void system_execute(struct TrapFrame* tf)
 {
-    struct TrapFrame *tf = current_process->tf;
     uint32 arg[5];
     int num = tf->tf_regs.reg_eax;
     if (num >= 0 && num < NUM_SYSTEM_CALLS)

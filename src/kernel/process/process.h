@@ -10,6 +10,12 @@
 #define MAX_PROCESS                 4096
 #define MAX_PID                     (MAX_PROCESS * 2)
 
+#define PF_EXITING                  0x00000001      // getting shutdown
+
+#define WT_INTERRUPTED              0x80000000                    // the wait state could be interrupted
+#define WT_CHILD                    (0x00000001 | WT_INTERRUPTED)
+
+
 #define OffsetOfProcessControlBlock(le, member) container_of((le), struct ProcessControlBlock, member)
 
 enum ProcessState
@@ -49,6 +55,9 @@ struct ProcessControlBlock
     char name[PROCESS_NAME_LEN + 1];    // 进程名字
     ListEntry list_link;       // Process link list
     ListEntry hash_link;       // Process hash list
+    int exit_code;                                      // exit code (be sent to parent proc)
+    uint32 wait_state;                                  // waiting state
+    struct ProcessControlBlock *cptr, *yptr, *optr;     // relations between processes
 };
 
 extern struct ProcessControlBlock *idle_process;
@@ -65,5 +74,9 @@ char *get_process_name(struct ProcessControlBlock *process);
 
 int do_fork(uint32 clone_flags, uintptr stack, struct TrapFrame *tf);
 int do_exit(int error_code);
+int do_yield(void);
+int do_execve(const char *name, usize name_length, unsigned char *binary, usize binary_size);
+int do_wait(int pid, int *code_store);
+int do_kill(int pid);
 
 #endif // __PROCESS_H__

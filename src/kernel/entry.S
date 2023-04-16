@@ -62,7 +62,7 @@ __boot_page_dir:
     .space (KERNEL_BASE >> PAGE_SHIFT >> 10 << 2) - (. - __boot_page_dir) # pad to PDE of KERNEL_BASE
 
     # 将 虚拟地址 3G + (0 ~ 4M) 映射到物理地址 0 ~ 4M
-    # 728号页目录表项，4字节，指向__boot_pt1页表
+    # 768号页目录表项，4字节，指向__boot_pt1页表
     .long REALLOC(__boot_pt1) + (PTE_P | PTE_U | PTE_W)
 
     # 补齐一页大小，4096字节

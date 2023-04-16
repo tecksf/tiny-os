@@ -32,8 +32,11 @@ const struct PhysicalMemoryManager *memory_manager;
 struct Page *pages;
 usize num_of_physical_page = 0; // 物理内存的总页数
 
+extern pde __boot_page_dir;
 pde *boot_page_dir = &__boot_page_dir;
 uintptr boot_cr3;
+
+char *temp_user_space_start = NULL;
 
 static inline void load_gdt(struct Arch *arch)
 {
@@ -98,7 +101,7 @@ static void physical_page_init()
         struct Room room = calculate_room(memory_map->map[i].size);
 
         kernel_print("  memory: size = %08llx(%2dG %3dM %3dK %3dB), [%08llx, %08llx], type = %d.\n",
-               memory_map->map[i].size, room.gb, room.mb, room.kb, room.bytes, start, finish - 1, memory_map->map[i].type);
+                     memory_map->map[i].size, room.gb, room.mb, room.kb, room.bytes, start, finish - 1, memory_map->map[i].type);
 
         if (memory_map->map[i].type == E820_ADDRESS_RANGE_MEMORY)
         {
@@ -118,9 +121,12 @@ static void physical_page_init()
     num_of_physical_page = max_physical_address / PAGE_SIZE;
     kernel_print("max physical address = %08llx, num of physical page = %d, end = %p\n", max_physical_address, num_of_physical_page, end);
 
+    temp_user_space_start = (char *) RoundUp((void *) end, PAGE_SIZE);
+
+
     // 从end位置开始（按4096对齐后），分配Page结构体，第一个Page结构体永远对应第一个物理页，依次类推
     // 将内核所占的空间 KERNEL_MEMORY_SIZE， 对应的Page设置为已使用
-    pages = (struct Page *) RoundUp((void *) end, PAGE_SIZE);
+    pages = (struct Page *) RoundUp((void *) (temp_user_space_start + PAGE_SIZE), PAGE_SIZE);
     for (i = 0; i < num_of_physical_page; i++)
     {
         SetPageReserved(pages + i);
@@ -213,7 +219,7 @@ void physical_memory_init()
 
     physical_page_init();
 
-    // 页目录表第1023项映射到页目录表自身
+    // 页目录表第1003项映射到页目录表自身
     boot_page_dir[PageDirectoryIndex(VPT)] = PhysicalAddress(boot_page_dir) | PTE_P | PTE_W;
 
     gdt_init();
@@ -260,7 +266,7 @@ static inline void remove_page_and_page_table_entry(pde *page_dir, uintptr linea
 // 设置页对应的页表项，即为页表新插入一张页
 int page_insert(pde *page_dir, struct Page *page, uintptr linear_address, uint32 perm)
 {
-    pte *entry = get_page_table_entry(page_dir, linear_address, 1);
+    pte *entry = get_page_table_entry(page_dir, linear_address, true);
     if (entry == NULL)
     {
         return -E_NO_MEM;
@@ -304,13 +310,13 @@ struct Page *page_dir_alloc_page(pde *page_dir, uintptr linear_address, uint32 p
             deallocate_pages(page, 1);
             return NULL;
         }
-        if (swap_init_ok)
-        {
-            swap_map_swappable(virtual_memory_verification, linear_address, page, 0);
-            page->pra_vaddr = linear_address;
-            assert(get_page_reference(page) == 1);
-            //kernel_print("get No. %d  page: pra_vaddr %x, pra_link.prev %x, pra_link_next %x in pgdir_alloc_page\n", (page-pages), page->pra_vaddr,page->pra_page_link.prev, page->pra_page_link.next);
-        }
+//        if (swap_init_ok && virtual_memory_verification != NULL)
+//        {
+//            swap_map_swappable(virtual_memory_verification, linear_address, page, 0);
+//            page->pra_vaddr = linear_address;
+//            assert(get_page_reference(page) == 1);
+//            //kernel_print("get No. %d  page: pra_vaddr %x, pra_link.prev %x, pra_link_next %x in pgdir_alloc_page\n", (page-pages), page->pra_vaddr,page->pra_page_link.prev, page->pra_page_link.next);
+//        }
     }
     return page;
 }

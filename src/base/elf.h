@@ -5,7 +5,26 @@
 
 #define EI_NIDENT   16
 #define ELF_MAGIC   0x464C457FU            // "\x7FELF" in little endian
-#define ELF_PT_LOAD 1
+
+#define ELF_PT_NULL	                0	                    // 表示该 Program Header 表项无效，没有对应的段
+#define ELF_PT_LOAD	                1	                    // 表示该 Program Header 描述的是一个可加载的段，通常包含可执行代码、数据、只读数据等信息
+#define ELF_PT_DYNAMIC	            2	                    // 表示该 Program Header 描述的是动态链接信息，通常包含 .dynamic 节的信息
+#define ELF_PT_INTERP	            3	                    // 表示该 Program Header 描述的是动态链接器的路径名，通常包含 .interp 节的信息
+#define ELF_PT_NOTE	                4	                    // 表示该 Program Header 描述的是一些辅助信息，通常包含一些调试符号信息、版本信息等
+#define ELF_PT_SHLIB	            5	                    // 废弃的常量
+#define ELF_PT_PHDR	                6	                    // 表示该 Program Header 描述的是 ELF Header 和 Program Header 表本身的信息
+#define ELF_PT_TLS	                7	                    // 表示该 Program Header 描述的是 TLS（Thread-Local Storage，线程局部存储）相关的信息
+#define ELF_PT_NUM	                8	                    // 表示 Program Header 中的类型数目
+#define ELF_PT_LOOS	                0x60000000	            // 操作系统特定的值的开始标志
+#define ELF_PT_GNU_EH_FRAME	        0x6474e550	            // GNU C++ 异常处理框架相关信息
+#define ELF_PT_GNU_STACK	        0x6474e551	            // 表示栈的可执行性和可增长性，仅在 Linux 中有效
+#define ELF_PT_GNU_RELRO	        0x6474e552	            // 表示只读段的动态重定位，仅在 Linux 中有效
+#define ELF_PT_LOPROC	            0x70000000	            // 处理器特定的值的开始标志
+#define ELF_PT_HIPROC	            0x7fffffff	            // 处理器特定的值的结束标志
+#define ELF_PT_LOUSER	            0x80000000	            // 应用程序保留的值的开始标志
+#define ELF_PT_HIUSER	            0xffffffff	            // 应用程序保留的值的结束标志
+
+
 #define ELF_PF_X    1
 #define ELF_PF_W    2
 #define ELF_PF_R    4
