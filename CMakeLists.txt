@@ -95,7 +95,7 @@ foreach (F ${USER_SRC})
       POST_BUILD
       COMMAND dd if=${EXECUTABLE_OUTPUT_PATH}/${APP_NAME} of=${USER_IMAGE} seek=${START_SECTION} conv=notrunc
       VERBATIM)
-  math(EXPR START_SECTION "${START_SECTION}+8")
+  math(EXPR START_SECTION "${START_SECTION}+2048")
 endforeach ()
 
 add_dependencies(kernel ${APPS})
