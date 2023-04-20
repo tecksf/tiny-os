@@ -80,6 +80,7 @@ void page_remove(pde *page_dir, uintptr linear_address);
 struct Page *page_dir_alloc_page(pde *page_dir, uintptr linear_address, uint32 perm);
 
 void physical_memory_init();
+void print_page_table_item(uintptr address);
 
 static inline ppn get_page_index(struct Page *page)
 {

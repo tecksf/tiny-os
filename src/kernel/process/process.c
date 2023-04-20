@@ -381,7 +381,6 @@ int load_program_code(unsigned char *binary, usize length)
 
         // start, end 为构建时的线性地址，需要页对齐
         uintptr start = ph->p_vaddr, end = ph->p_vaddr + ph->p_filesz, linear_address = RoundDown(start, PAGE_SIZE);
-        kernel_print("==== segment range: [0x%x, 0x%x] ====\n", start, end);
 
         struct Page *page;
 
@@ -462,6 +461,8 @@ int load_program_code(unsigned char *binary, usize length)
     tf->tf_esp = USER_STACK_TOP;
     tf->tf_eip = elf->e_entry;
     tf->tf_eflags = FL_IF;
+
+//    print_page_table_item((uintptr) memory->page_dir);
 
     ret = 0;
 

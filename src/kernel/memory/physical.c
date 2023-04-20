@@ -126,7 +126,7 @@ static void physical_page_init()
 
     // 从end位置开始（按4096对齐后），分配Page结构体，第一个Page结构体永远对应第一个物理页，依次类推
     // 将内核所占的空间 KERNEL_MEMORY_SIZE， 对应的Page设置为已使用
-    pages = (struct Page *) RoundUp((void *) (temp_user_space_start + PAGE_SIZE), PAGE_SIZE);
+    pages = (struct Page *) RoundUp((void *) (temp_user_space_start + PAGE_SIZE * 256), PAGE_SIZE);
     for (i = 0; i < num_of_physical_page; i++)
     {
         SetPageReserved(pages + i);
@@ -208,7 +208,8 @@ pte *get_page_table_entry(pde *page_dir, uintptr linear_address, bool create)
         memory_set(VirtualAddress(physical_address), 0, PAGE_SIZE);
         *entry = physical_address | PTE_U | PTE_W | PTE_P;
     }
-    return &((pte *) VirtualAddress(PageDirectoryEntryAddress(*entry)))[PageTableIndex(linear_address)];
+    uint32 index = PageTableIndex(linear_address);
+    return &((pte *) VirtualAddress(PageDirectoryEntryAddress(*entry)))[index];
 }
 
 void physical_memory_init()
@@ -223,6 +224,8 @@ void physical_memory_init()
     boot_page_dir[PageDirectoryIndex(VPT)] = PhysicalAddress(boot_page_dir) | PTE_P | PTE_W;
 
     gdt_init();
+
+//    print_page_table_item((uintptr) boot_page_dir);
 }
 
 void *kernel_malloc(usize n)
@@ -319,4 +322,25 @@ struct Page *page_dir_alloc_page(pde *page_dir, uintptr linear_address, uint32 p
 //        }
     }
     return page;
+}
+
+void print_page_table_item(uintptr address)
+{
+    kernel_print("\n======== print_page_table_item() ========\n\n");
+    pde *item = (pde *) address;
+    for (int i = 0; i < 1024; i++)
+    {
+        if (*(item + i) == 0)
+            continue;
+        kernel_print("pde item = %04d: 0x%x\n", i, PageDirectoryEntryAddress(*(item + i)));
+        pte* entry = (pte*)(VirtualAddress(PageTableEntryAddress(*(item + i))));
+        for (int j = 0; j < 1024; j++)
+        {
+            if (*(entry + j) == 0 || (*(entry + j) & (PTE_U | PTE_P)) != (PTE_U | PTE_P))
+                continue;
+
+            kernel_print(" |--pte item = %04d: 0x%x\n", j, PageTableEntryAddress(*(entry + j)));
+        }
+    }
+    kernel_print("\n======== print_page_table_item() ========\n\n");
 }

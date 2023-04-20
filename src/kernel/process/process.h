@@ -55,8 +55,8 @@ struct ProcessControlBlock
     char name[PROCESS_NAME_LEN + 1];    // 进程名字
     ListEntry list_link;       // Process link list
     ListEntry hash_link;       // Process hash list
-    int exit_code;                                      // exit code (be sent to parent proc)
-    uint32 wait_state;                                  // waiting state
+    int exit_code;                                      // 当前进程退出时的原因，会由父进程获取
+    uint32 wait_state;                                  // 当前进程进入等待的原因
     struct ProcessControlBlock *cptr, *yptr, *optr;     // relations between processes
 };
 
