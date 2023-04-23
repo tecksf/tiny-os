@@ -4,15 +4,15 @@
 #include <stdarg.h>
 #include <picirq.h>
 
-static bool is_panic = 0;
+static bool is_panic = false;
 
 void __panic(const char *file, int line, const char *fmt, ...)
 {
-//    if (is_panic)
-//    {
-//        goto panic_dead;
-//    }
-//    is_panic = 1;
+    if (is_panic)
+    {
+        goto panic_dead;
+    }
+    is_panic = true;
 
     va_list ap;
     va_start(ap, fmt);

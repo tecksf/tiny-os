@@ -15,9 +15,18 @@
 #include "debug/kernel_print.h"
 #include "process/process.h"
 #include "process/load.h"
+#include <string.h>
+
+static inline void kernel_bss_segment_init()
+{
+    extern char edata[], end[];
+    memory_set(edata, 0, end - edata);
+}
 
 void kernel_init(void)
 {
+    kernel_bss_segment_init();
+
     cons_init();
 
     const char *message = "os is loading ...";
