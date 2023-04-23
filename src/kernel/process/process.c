@@ -346,6 +346,7 @@ void cpu_idle(void)
         {
             schedule();
         }
+        // panic("idle process run again\n");
     }
 }
 
@@ -569,9 +570,15 @@ bad_fork_cleanup_process:
 
 int do_exit(int error_code)
 {
-    if (current_process == idle_process || current_process == init_process)
+    if (current_process == idle_process)
     {
-        panic("idle or init process exit.\n");
+        panic("idle process exit.\n");
+    }
+
+    if (current_process == init_process)
+    {
+        kernel_print("===>>> switch to idle process\n");
+        run_process(idle_process);
     }
 
     // 释放进程拥有的内存资源，更新对应的页表项
@@ -589,7 +596,7 @@ int do_exit(int error_code)
     }
 
     // 设置进程为僵尸进程，以及进程退出码
-    current_process->stack = PROCESS_ZOMBIE;
+    current_process->state = PROCESS_ZOMBIE;
     current_process->exit_code = error_code;
 
     bool flag;
@@ -741,6 +748,8 @@ found:
     {
         panic("wait idle process or init process.\n");
     }
+
+    kernel_print("precess [name=%s, pid=%d] will be released!!!\n", get_process_name(process), process->pid);
 
     if (code_store != NULL)
     {
