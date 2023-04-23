@@ -340,13 +340,19 @@ void process_init(void)
 
 void cpu_idle(void)
 {
+    int continuous_unused_calling_times = 0;
     while (1)
     {
+        continuous_unused_calling_times++;
         if (current_process->need_reschedule)
         {
+            continuous_unused_calling_times = 0;
             schedule();
         }
-        // panic("idle process run again\n");
+
+        if (continuous_unused_calling_times > 5)
+            panic("idle process run again, times=%d\n", continuous_unused_calling_times);
+        kernel_print("idle process run again, times=%d\n", continuous_unused_calling_times);
     }
 }
 
@@ -575,12 +581,6 @@ int do_exit(int error_code)
         panic("idle process exit.\n");
     }
 
-    if (current_process == init_process)
-    {
-        kernel_print("===>>> switch to idle process\n");
-        run_process(idle_process);
-    }
-
     // 释放进程拥有的内存资源，更新对应的页表项
     struct VirtualMemory *memory = current_process->memory;
     if (memory != NULL)
@@ -643,6 +643,7 @@ int do_exit(int error_code)
 
 int do_yield(void)
 {
+    current_process->need_reschedule = 1;
     return 0;
 }
 
