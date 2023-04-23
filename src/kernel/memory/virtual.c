@@ -188,41 +188,39 @@ int duplicate_virtual_memory_mapping(struct VirtualMemory *to, struct VirtualMem
     ListEntry *list = &(from->mmap_list), *le = list;
     while ((le = list_prev(le)) != list)
     {
-        struct VirtualMemoryArea *vma, *nvma;
+        struct VirtualMemoryArea *vma, *new_vma;
         vma = OffsetOfVirtualMemoryArea(le, list_link);
-        nvma = create_virtual_memory_area(vma->start, vma->end, vma->flags);
-        if (nvma == NULL)
+        new_vma = create_virtual_memory_area(vma->start, vma->end, vma->flags);
+        if (new_vma == NULL)
+            return -E_NO_MEM;
+
+        insert_virtual_memory_area(to, new_vma);
+
+        bool share = 0;
+        if (copy_page_table_range(to->page_dir, from->page_dir, vma->start, vma->end, share) != 0)
         {
             return -E_NO_MEM;
         }
-
-        insert_virtual_memory_area(to, nvma);
-
-        bool share = 0;
-//        if (copy_range(to->pgdir, from->pgdir, vma->vm_start, vma->vm_end, share) != 0)
-//        {
-//            return -E_NO_MEM;
-//        }
     }
     return 0;
 }
 
-void exit_virtual_memory_mapping(struct VirtualMemory *memory)
+void break_virtual_memory_mapping(struct VirtualMemory *memory)
 {
     assert(memory != NULL && get_shared_count(memory) == 0);
     pde *page_dir = memory->page_dir;
     ListEntry *list = &(memory->mmap_list), *le = list;
-//    while ((le = list_next(le)) != list)
-//    {
-//        struct VirtualMemoryArea *vma = OffsetOfVirtualMemoryArea(le, list_link);
-//        unmap_range(page_dir, vma->start, vma->end);
-//    }
-//
-//    while ((le = list_next(le)) != list)
-//    {
-//        struct VirtualMemoryArea *vma = OffsetOfVirtualMemoryArea(le, list_link);
-//        exit_range(page_dir, vma->start, vma->end);
-//    }
+    while ((le = list_next(le)) != list)
+    {
+        struct VirtualMemoryArea *vma = OffsetOfVirtualMemoryArea(le, list_link);
+        unmap_page_table_range(page_dir, vma->start, vma->end);
+    }
+
+    while ((le = list_next(le)) != list)
+    {
+        struct VirtualMemoryArea *vma = OffsetOfVirtualMemoryArea(le, list_link);
+        unmap_page_directory_table_range(page_dir, vma->start, vma->end);
+    }
 }
 
 struct VirtualMemoryArea *create_virtual_memory_area(uintptr start, uintptr end, uint32 flags)

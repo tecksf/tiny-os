@@ -13,7 +13,7 @@
 // 包含所有虚拟内存空间的共同属性
 struct VirtualMemory
 {
-    ListEntry mmap_list;                            // 指向由多个VirtualMemoryAddress组成的链表
+    ListEntry mmap_list;                            // 指向由多个 VirtualMemoryArea 组成的链表
     struct VirtualMemoryArea *mmap_cache;           // 指向当前正在使用的 VirtualMemoryArea，根据局部性原理，通常不用再寻找链表
     pde *page_dir;                                  // 指向页目录表，所有 VirtualMemoryArea 的页目录表相同
     int map_count;                                  // VirtualMemoryArea 的数量
@@ -39,7 +39,7 @@ struct VirtualMemory *create_virtual_memory(void);
 void destroy_virtual_memory(struct VirtualMemory *memory);
 int build_virtual_memory_mapping(struct VirtualMemory *memory, uintptr address, usize len, uint32 vm_flags);
 int duplicate_virtual_memory_mapping(struct VirtualMemory *to, struct VirtualMemory *from);
-void exit_virtual_memory_mapping(struct VirtualMemory *memory);
+void break_virtual_memory_mapping(struct VirtualMemory *memory);
 
 struct VirtualMemoryArea *create_virtual_memory_area(uintptr start, uintptr end, uint32 flags);
 struct VirtualMemoryArea *find_virtual_memory_area(struct VirtualMemory *memory, uintptr address);

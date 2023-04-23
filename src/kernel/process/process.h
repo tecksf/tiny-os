@@ -57,7 +57,10 @@ struct ProcessControlBlock
     ListEntry hash_link;       // Process hash list
     int exit_code;                                      // 当前进程退出时的原因，会由父进程获取
     uint32 wait_state;                                  // 当前进程进入等待的原因
-    struct ProcessControlBlock *cptr, *yptr, *optr;     // relations between processes
+
+    // 描述进程间的关系，child代表子进程，所有子进程构成一个链表
+    // younger, older 表示兄弟进程，younger 指向前一个，older指向后一个，构成双向链表
+    struct ProcessControlBlock *child, *younger, *older;
 };
 
 extern struct ProcessControlBlock *idle_process;

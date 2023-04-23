@@ -79,6 +79,10 @@ int page_insert(pde *page_dir, struct Page *page, uintptr linear_address, uint32
 void page_remove(pde *page_dir, uintptr linear_address);
 struct Page *page_dir_alloc_page(pde *page_dir, uintptr linear_address, uint32 perm);
 
+int copy_page_table_range(pde *to, pde *from, uintptr start, uintptr end, bool share);
+void unmap_page_table_range(pde *page_dir, uintptr start, uintptr end);
+void unmap_page_directory_table_range(pde *page_dir, uintptr start, uintptr end);
+
 void physical_memory_init();
 void print_page_table_item(uintptr address);
 
@@ -120,7 +124,7 @@ static inline struct Page *page_table_entry_to_page(pte pte)
     return physical_address_to_page(PageTableEntryAddress(pte));
 }
 
-static inline struct Page *pde2page(pde pde)
+static inline struct Page *page_directory_entry_to_page(pde pde)
 {
     return physical_address_to_page(PageDirectoryEntryAddress(pde));
 }

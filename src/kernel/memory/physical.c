@@ -324,6 +324,93 @@ struct Page *page_dir_alloc_page(pde *page_dir, uintptr linear_address, uint32 p
     return page;
 }
 
+// 拷贝进程某一segment的页表
+int copy_page_table_range(pde *to, pde *from, uintptr start, uintptr end, bool share)
+{
+    assert(start % PAGE_SIZE == 0 && end % PAGE_SIZE == 0);
+    assert(UserAccess(start, end));
+
+    while (start != 0 && start < end)
+    {
+        pte *entry = get_page_table_entry(from, start, false);
+        if (entry == NULL)
+        {
+            // 从线性地址 start 到 end, 页表物理地址并不连续;
+            // 如果一个页目录项为空，表示进程不占用这段空间，则线性地址就要跳过1024个页表大小的字节
+            start = RoundDown(start + PAGE_TABLE_SIZE, PAGE_TABLE_SIZE);
+            continue;
+        }
+
+        // 如果页目录项存在，则就要为新进程空间分配页表，更新对应的页目录项，页表项，并拷贝物理页的内容
+        if (*entry & PTE_P)
+        {
+            if (get_page_table_entry(to, start, true) == NULL)
+            {
+                return -E_NO_MEM;
+            }
+
+            uint32 perm = (*entry & PTE_USER);
+            struct Page *page = page_table_entry_to_page(*entry);
+
+            struct Page *new_page = allocate_pages(1);
+            assert(page != NULL && new_page != NULL);
+
+            int ret = 0;
+
+            void *src = page_to_virtual_address(page);
+            void *dst = page_to_virtual_address(new_page);
+            memory_copy(dst, src, PAGE_SIZE);
+
+            ret = page_insert(to, new_page, start, perm);
+            assert(ret == 0);
+        }
+        start += PAGE_SIZE;
+    }
+    return 0;
+}
+
+
+// 取消页表项和对应的页表的映射，并释放页表
+void unmap_page_table_range(pde *page_dir, uintptr start, uintptr end)
+{
+    assert(start % PAGE_SIZE == 0 && end % PAGE_SIZE == 0);
+    assert(UserAccess(start, end));
+
+    do
+    {
+        pte *entry = get_page_table_entry(page_dir, start, false);
+        if (entry == NULL)
+        {
+            start = RoundDown(start + PAGE_TABLE_SIZE, PAGE_TABLE_SIZE);
+            continue;
+        }
+        if (*entry != 0)
+        {
+            remove_page_and_page_table_entry(page_dir, start, entry);
+        }
+        start += PAGE_SIZE;
+    } while (start != 0 && start < end);
+}
+
+// 取消页目录表项和对应的页表的映射
+void unmap_page_directory_table_range(pde *page_dir, uintptr start, uintptr end)
+{
+    assert(start % PAGE_SIZE == 0 && end % PAGE_SIZE == 0);
+    assert(UserAccess(start, end));
+
+    start = RoundDown(start, PAGE_TABLE_SIZE);
+    do
+    {
+        int index = PageDirectoryIndex(start);
+        if (page_dir[index] & PTE_P)
+        {
+            deallocate_pages(page_directory_entry_to_page(page_dir[index]), 1);
+            page_dir[index] = 0;
+        }
+        start += PAGE_TABLE_SIZE;
+    } while (start != 0 && start < end);
+}
+
 void print_page_table_item(uintptr address)
 {
     kernel_print("\n======== print_page_table_item() ========\n\n");
@@ -333,7 +420,7 @@ void print_page_table_item(uintptr address)
         if (*(item + i) == 0)
             continue;
         kernel_print("pde item = %04d: 0x%x\n", i, PageDirectoryEntryAddress(*(item + i)));
-        pte* entry = (pte*)(VirtualAddress(PageTableEntryAddress(*(item + i))));
+        pte *entry = (pte *) (VirtualAddress(PageTableEntryAddress(*(item + i))));
         for (int j = 0; j < 1024; j++)
         {
             if (*(entry + j) == 0 || (*(entry + j) & (PTE_U | PTE_P)) != (PTE_U | PTE_P))

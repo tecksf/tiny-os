@@ -52,42 +52,42 @@ static struct ProcessControlBlock *create_process(void)
         process->cr3 = boot_cr3;
         process->flags = 0;
         memory_set(process->name, 0, PROCESS_NAME_LEN);
+
+        process->wait_state = 0;
+        process->child = process->older = process->younger = NULL;
     }
     return process;
 }
 
-// set_links - set the relation links of process
-static void set_links(struct ProcessControlBlock *proc)
+static void add_process(struct ProcessControlBlock *process)
 {
-    list_add(&process_list, &(proc->list_link));
-    proc->yptr = NULL;
-    if ((proc->optr = proc->parent->cptr) != NULL)
+    list_add(&process_list, &(process->list_link));
+    process->younger = NULL;
+    if ((process->older = process->parent->child) != NULL)
     {
-        proc->optr->yptr = proc;
+        process->older->younger = process;
     }
-    proc->parent->cptr = proc;
+    process->parent->child = process;
     num_process++;
 }
 
-// remove_links - clean the relation links of process
-static void remove_links(struct ProcessControlBlock *proc)
+static void remove_process(struct ProcessControlBlock *proc)
 {
     list_del(&(proc->list_link));
-    if (proc->optr != NULL)
+    if (proc->older != NULL)
     {
-        proc->optr->yptr = proc->yptr;
+        proc->older->younger = proc->younger;
     }
-    if (proc->yptr != NULL)
+    if (proc->younger != NULL)
     {
-        proc->yptr->optr = proc->optr;
+        proc->younger->older = proc->older;
     }
     else
     {
-        proc->parent->cptr = proc->optr;
+        proc->parent->child = proc->older;
     }
     num_process--;
 }
-
 
 static int get_pid(void)
 {
@@ -170,16 +170,49 @@ static int setup_page_directory_table(struct VirtualMemory *memory)
     return 0;
 }
 
-static void put_page_directory_table(struct VirtualMemory *memory)
+static void release_page_directory_table(struct VirtualMemory *memory)
 {
     deallocate_pages(virtual_address_to_page(memory->page_dir), 1);
 }
 
 static int copy_memory(uint32 clone_flags, struct ProcessControlBlock *process)
 {
-    assert(current_process->memory == NULL);
-    /* do nothing in this project */
+    struct VirtualMemory *memory, *old_memory = current_process->memory;
+    // 若复制的内核进程的内存，则 current_process->memory 为 NULL，因此不会发生拷贝
+    if (old_memory == NULL)
+        return 0;
+
+    if (clone_flags & CLONE_VM)
+    {
+        memory = old_memory;
+        goto good_memory;
+    }
+
+    int ret = -E_NO_MEM;
+    if ((memory = create_virtual_memory()) == NULL)
+        goto bad_memory;
+
+    if (setup_page_directory_table(memory) != 0)
+        goto cleanup_memory;
+
+    ret = duplicate_virtual_memory_mapping(memory, old_memory);
+    if (ret != 0)
+        goto cleanup_virtual_memory_mapping;
+
+
+good_memory:
+    increase_shared_count(memory);
+    process->memory = memory;
+    process->cr3 = PhysicalAddress(memory->page_dir);
     return 0;
+
+cleanup_virtual_memory_mapping:
+    break_virtual_memory_mapping(memory);
+    release_page_directory_table(memory);
+cleanup_memory:
+    destroy_virtual_memory(memory);
+bad_memory:
+    return ret;
 }
 
 static void fork_ret(void)
@@ -469,9 +502,9 @@ int load_program_code(unsigned char *binary, usize length)
 exit_func:
     return ret;
 bad_cleanup_memory_map:
-    exit_virtual_memory_mapping(memory);
+    break_virtual_memory_mapping(memory);
 bad_elf_cleanup_page_dir:
-    put_page_directory_table(memory);
+    release_page_directory_table(memory);
 bad_page_dir_cleanup_memory:
     destroy_virtual_memory(memory);
 bad_memory:
@@ -498,7 +531,7 @@ int do_fork(uint32 clone_flags, uintptr stack, struct TrapFrame *tf)
     // 当前进程为新进程的父进程
     process->parent = current_process;
 
-    // 为新进程设置栈空间
+    // 为新进程设置内核栈空间
     if (setup_kernel_stack(process) != 0)
     {
         goto bad_fork_cleanup_process;
@@ -517,8 +550,7 @@ int do_fork(uint32 clone_flags, uintptr stack, struct TrapFrame *tf)
     {
         process->pid = get_pid();
         hash_process(process);
-        list_add(&process_list, &(process->list_link));
-        num_process++;
+        add_process(process);
     }
     RestoreLocalInterrupt(flag);
 
@@ -537,6 +569,68 @@ bad_fork_cleanup_process:
 
 int do_exit(int error_code)
 {
+    if (current_process == idle_process || current_process == init_process)
+    {
+        panic("idle or init process exit.\n");
+    }
+
+    // 释放进程拥有的内存资源，更新对应的页表项
+    struct VirtualMemory *memory = current_process->memory;
+    if (memory != NULL)
+    {
+        lcr3(boot_cr3);
+        if (decrease_shared_count(memory) == 0)
+        {
+            break_virtual_memory_mapping(memory);
+            release_page_directory_table(memory);
+            destroy_virtual_memory(memory);
+        }
+        current_process->memory = NULL;
+    }
+
+    // 设置进程为僵尸进程，以及进程退出码
+    current_process->stack = PROCESS_ZOMBIE;
+    current_process->exit_code = error_code;
+
+    bool flag;
+    struct ProcessControlBlock *process;
+    SaveLocalInterrupt(flag);
+    {
+        // 如果父进程处于等待子进程的状态，那就唤醒父进程，让它完成子进程资源（内核栈，进程控制块）的回收
+        process = current_process->parent;
+        if (process->wait_state == WT_CHILD)
+        {
+            wakeup_process(process);
+        }
+
+        // 如果当前进程还有子进程，则需要把这些子进程的父进程设置为 init_process，如果有子进程为僵尸进程，则需要唤醒 init_process
+        while (current_process->child != NULL)
+        {
+            process = current_process->child;
+            current_process->child = process->child;
+            process->younger = NULL;
+
+            if ((process->older = init_process->child) != NULL)
+            {
+                init_process->child->younger = process;
+            }
+            process->parent = init_process;
+            init_process->child = process;
+            if (process->state == PROCESS_ZOMBIE)
+            {
+                if (init_process->wait_state == WT_CHILD)
+                {
+                    wakeup_process(init_process);
+                }
+            }
+        }
+    }
+    RestoreLocalInterrupt(flag);
+
+    schedule();
+
+    panic("do_exit will not return, name=%s, pid=%d\n", current_process->name, current_process->pid);
+
     return 0;
 }
 
@@ -567,8 +661,8 @@ int do_execve(const char *name, usize name_length, unsigned char *binary, usize 
         lcr3(boot_cr3);
         if (decrease_shared_count(memory) == 0)
         {
-            exit_virtual_memory_mapping(memory);
-            put_page_directory_table(memory);
+            break_virtual_memory_mapping(memory);
+            release_page_directory_table(memory);
             destroy_virtual_memory(memory);
         }
         current_process->memory = NULL;
@@ -588,25 +682,28 @@ execve_exit:
 
 int do_wait(int pid, int *code_store)
 {
-    struct VirtualMemory *mm = current_process->memory;
+    // current_process 是当前用户进程的父进程
+    struct VirtualMemory *memory = current_process->memory;
     if (code_store != NULL)
     {
-        if (!user_memory_verification(mm, (uintptr) code_store, sizeof(int), 1))
+        if (!user_memory_verification(memory, (uintptr) code_store, sizeof(int), 1))
         {
             return -E_INVAL;
         }
     }
 
     struct ProcessControlBlock *process;
-    bool intr_flag, haskid;
+    bool flag, hask_id;
 repeat:
-    haskid = 0;
+    hask_id = false;
+
+    // 如果 pid 不为0,表示找一个特定的pid,否则就找一个任意的处于退出状态的子进程
     if (pid != 0)
     {
         process = find_process(pid);
         if (process != NULL && process->parent == current_process)
         {
-            haskid = 1;
+            hask_id = true;
             if (process->state == PROCESS_ZOMBIE)
             {
                 goto found;
@@ -615,17 +712,18 @@ repeat:
     }
     else
     {
-        process = current_process->cptr;
-        for (; process != NULL; process = process->optr)
+        process = current_process->child;
+        for (; process != NULL; process = process->older)
         {
-            haskid = 1;
+            hask_id = true;
             if (process->state == PROCESS_ZOMBIE)
             {
                 goto found;
             }
         }
     }
-    if (haskid)
+
+    if (hask_id)
     {
         current_process->state = PROCESS_SLEEPING;
         current_process->wait_state = WT_CHILD;
@@ -643,18 +741,21 @@ found:
     {
         panic("wait idle process or init process.\n");
     }
+
     if (code_store != NULL)
     {
         *code_store = process->exit_code;
     }
-    SaveLocalInterrupt(intr_flag);
+
+    SaveLocalInterrupt(flag);
     {
         unhash_process(process);
-        remove_links(process);
+        remove_process(process);
     }
-    RestoreLocalInterrupt(intr_flag);
+    RestoreLocalInterrupt(flag);
+
     release_kernel_stack(process);
-//    kfree(process);
+    kernel_free(process, sizeof(struct ProcessControlBlock));
     return 0;
 }
 
