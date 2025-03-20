@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.22)
 project(foots_stone C)
 
 enable_language(ASM C)

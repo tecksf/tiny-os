@@ -1,7 +1,3 @@
-//
-// Created by tang on 3/12/23.
-//
-
 #include "core/env.h"
 #include "driver/console.h"
 #include "driver/clock.h"

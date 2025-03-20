@@ -1,9 +1,9 @@
 #!/bin/bash
 
-disk1=/home/tang/Programs/C/foots-stone/cmake-build-debug/kernel.img
-disk2=/home/tang/Programs/C/foots-stone/cmake-build-debug/swap.img
-disk3=/home/tang/Programs/C/foots-stone/cmake-build-debug/user.img
-disk4=/home/tang/Programs/C/foots-stone/cmake-build-debug/temp.img
+disk1=./cmake-build-debug/kernel.img
+disk2=./cmake-build-debug/swap.img
+disk3=./cmake-build-debug/user.img
+disk4=./cmake-build-debug/temp.img
 
 parameters="-no-reboot -parallel stdio -serial null"
 if [ "$1" = "debug" ]; then
